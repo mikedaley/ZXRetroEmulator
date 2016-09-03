@@ -1,0 +1,444 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		ED3650111D7AFA6D00A6383B /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = ED3650101D7AFA6D00A6383B /* AppDelegate.m */; };
+		ED3650141D7AFA6D00A6383B /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = ED3650131D7AFA6D00A6383B /* main.m */; };
+		ED3650161D7AFA6D00A6383B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ED3650151D7AFA6D00A6383B /* Assets.xcassets */; };
+		ED3650191D7AFA6D00A6383B /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = ED3650171D7AFA6D00A6383B /* MainMenu.xib */; };
+		ED3650281D7AFADA00A6383B /* 48.ROM in Resources */ = {isa = PBXBuildFile; fileRef = ED3650271D7AFADA00A6383B /* 48.ROM */; };
+		ED3650381D7AFAE400A6383B /* Z80Core.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ED36502A1D7AFAE400A6383B /* Z80Core.cpp */; };
+		ED3650391D7AFAE400A6383B /* Z80Core_MainOpcodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ED36502D1D7AFAE400A6383B /* Z80Core_MainOpcodes.cpp */; };
+		ED36503A1D7AFAE400A6383B /* Z80Core_CBOpcodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ED36502F1D7AFAE400A6383B /* Z80Core_CBOpcodes.cpp */; };
+		ED36503B1D7AFAE400A6383B /* Z80Core_EDOpcodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ED3650311D7AFAE400A6383B /* Z80Core_EDOpcodes.cpp */; };
+		ED36503C1D7AFAE400A6383B /* Z80Core_DDOpcodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ED3650331D7AFAE400A6383B /* Z80Core_DDOpcodes.cpp */; };
+		ED36503D1D7AFAE400A6383B /* Z80Core_FDOpcodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ED3650351D7AFAE400A6383B /* Z80Core_FDOpcodes.cpp */; };
+		ED36503E1D7AFAE400A6383B /* Z80Core_DDCB_FDCBOpcodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ED3650371D7AFAE400A6383B /* Z80Core_DDCB_FDCBOpcodes.cpp */; };
+		ED3650411D7AFAF000A6383B /* ZXSpectrum48.mm in Sources */ = {isa = PBXBuildFile; fileRef = ED3650401D7AFAF000A6383B /* ZXSpectrum48.mm */; };
+		ED3650461D7AFB6B00A6383B /* EmulationViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = ED3650441D7AFB6B00A6383B /* EmulationViewController.m */; };
+		ED3650471D7AFB6B00A6383B /* EmulationViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = ED3650451D7AFB6B00A6383B /* EmulationViewController.xib */; };
+		ED3650491D7B116E00A6383B /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED3650481D7B116E00A6383B /* QuartzCore.framework */; };
+		ED36504D1D7B21C900A6383B /* EmuApplication.m in Sources */ = {isa = PBXBuildFile; fileRef = ED36504C1D7B21C900A6383B /* EmuApplication.m */; };
+		ED3650511D7B2C0700A6383B /* AudioCore.m in Sources */ = {isa = PBXBuildFile; fileRef = ED3650501D7B2C0700A6383B /* AudioCore.m */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		ED36500C1D7AFA6D00A6383B /* ZXRetroEmulator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZXRetroEmulator.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		ED36500F1D7AFA6D00A6383B /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		ED3650101D7AFA6D00A6383B /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		ED3650131D7AFA6D00A6383B /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		ED3650151D7AFA6D00A6383B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		ED3650181D7AFA6D00A6383B /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
+		ED36501A1D7AFA6D00A6383B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		ED3650271D7AFADA00A6383B /* 48.ROM */ = {isa = PBXFileReference; lastKnownFileType = file; path = 48.ROM; sourceTree = "<group>"; };
+		ED3650291D7AFAE400A6383B /* Z80Core.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Z80Core.h; sourceTree = "<group>"; };
+		ED36502A1D7AFAE400A6383B /* Z80Core.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Z80Core.cpp; sourceTree = "<group>"; };
+		ED36502B1D7AFAE400A6383B /* Z80CoreOpcodeTables.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Z80CoreOpcodeTables.h; sourceTree = "<group>"; };
+		ED36502C1D7AFAE400A6383B /* Z80Core_MainOpcodes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Z80Core_MainOpcodes.h; sourceTree = "<group>"; };
+		ED36502D1D7AFAE400A6383B /* Z80Core_MainOpcodes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Z80Core_MainOpcodes.cpp; sourceTree = "<group>"; };
+		ED36502E1D7AFAE400A6383B /* Z80Core_CBOpcodes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Z80Core_CBOpcodes.h; sourceTree = "<group>"; };
+		ED36502F1D7AFAE400A6383B /* Z80Core_CBOpcodes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Z80Core_CBOpcodes.cpp; sourceTree = "<group>"; };
+		ED3650301D7AFAE400A6383B /* Z80Core_EDOpcodes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Z80Core_EDOpcodes.h; sourceTree = "<group>"; };
+		ED3650311D7AFAE400A6383B /* Z80Core_EDOpcodes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Z80Core_EDOpcodes.cpp; sourceTree = "<group>"; };
+		ED3650321D7AFAE400A6383B /* Z80Core_DDOpcodes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Z80Core_DDOpcodes.h; sourceTree = "<group>"; };
+		ED3650331D7AFAE400A6383B /* Z80Core_DDOpcodes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Z80Core_DDOpcodes.cpp; sourceTree = "<group>"; };
+		ED3650341D7AFAE400A6383B /* Z80Core_FDOpcodes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Z80Core_FDOpcodes.h; sourceTree = "<group>"; };
+		ED3650351D7AFAE400A6383B /* Z80Core_FDOpcodes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Z80Core_FDOpcodes.cpp; sourceTree = "<group>"; };
+		ED3650361D7AFAE400A6383B /* Z80Core_DDCB_FDCBOpcodes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Z80Core_DDCB_FDCBOpcodes.h; sourceTree = "<group>"; };
+		ED3650371D7AFAE400A6383B /* Z80Core_DDCB_FDCBOpcodes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Z80Core_DDCB_FDCBOpcodes.cpp; sourceTree = "<group>"; };
+		ED36503F1D7AFAF000A6383B /* ZXSpectrum48.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ZXSpectrum48.h; sourceTree = "<group>"; };
+		ED3650401D7AFAF000A6383B /* ZXSpectrum48.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ZXSpectrum48.mm; sourceTree = "<group>"; };
+		ED3650421D7AFB4000A6383B /* ViewEventProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ViewEventProtocol.h; sourceTree = "<group>"; };
+		ED3650431D7AFB6B00A6383B /* EmulationViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EmulationViewController.h; sourceTree = "<group>"; };
+		ED3650441D7AFB6B00A6383B /* EmulationViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = EmulationViewController.m; sourceTree = "<group>"; };
+		ED3650451D7AFB6B00A6383B /* EmulationViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = EmulationViewController.xib; sourceTree = "<group>"; };
+		ED3650481D7B116E00A6383B /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		ED36504B1D7B21C900A6383B /* EmuApplication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EmuApplication.h; sourceTree = "<group>"; };
+		ED36504C1D7B21C900A6383B /* EmuApplication.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = EmuApplication.m; sourceTree = "<group>"; };
+		ED36504F1D7B2C0700A6383B /* AudioCore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioCore.h; sourceTree = "<group>"; };
+		ED3650501D7B2C0700A6383B /* AudioCore.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AudioCore.m; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		ED3650091D7AFA6D00A6383B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ED3650491D7B116E00A6383B /* QuartzCore.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		ED3650031D7AFA6D00A6383B = {
+			isa = PBXGroup;
+			children = (
+				ED36500E1D7AFA6D00A6383B /* ZXRetroEmulator */,
+				ED36500D1D7AFA6D00A6383B /* Products */,
+				ED3650481D7B116E00A6383B /* QuartzCore.framework */,
+			);
+			sourceTree = "<group>";
+		};
+		ED36500D1D7AFA6D00A6383B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				ED36500C1D7AFA6D00A6383B /* ZXRetroEmulator.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		ED36500E1D7AFA6D00A6383B /* ZXRetroEmulator */ = {
+			isa = PBXGroup;
+			children = (
+				ED36504E1D7B2BE900A6383B /* Audio Core */,
+				ED36504A1D7B21B100A6383B /* EmuApplication */,
+				ED3650201D7AFA7800A6383B /* ROMS */,
+				ED3650211D7AFA8800A6383B /* Z80 Core */,
+				ED3650231D7AFA9F00A6383B /* UI */,
+				ED3650241D7AFAA500A6383B /* View Controllers */,
+				ED3650251D7AFAB200A6383B /* App Delegate */,
+				ED3650261D7AFAC000A6383B /* Machines */,
+				ED3650221D7AFA9400A6383B /* Assets */,
+				ED3650121D7AFA6D00A6383B /* Supporting Files */,
+			);
+			path = ZXRetroEmulator;
+			sourceTree = "<group>";
+		};
+		ED3650121D7AFA6D00A6383B /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				ED36501A1D7AFA6D00A6383B /* Info.plist */,
+				ED3650131D7AFA6D00A6383B /* main.m */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		ED3650201D7AFA7800A6383B /* ROMS */ = {
+			isa = PBXGroup;
+			children = (
+				ED3650271D7AFADA00A6383B /* 48.ROM */,
+			);
+			name = ROMS;
+			sourceTree = "<group>";
+		};
+		ED3650211D7AFA8800A6383B /* Z80 Core */ = {
+			isa = PBXGroup;
+			children = (
+				ED3650291D7AFAE400A6383B /* Z80Core.h */,
+				ED36502A1D7AFAE400A6383B /* Z80Core.cpp */,
+				ED36502B1D7AFAE400A6383B /* Z80CoreOpcodeTables.h */,
+				ED36502C1D7AFAE400A6383B /* Z80Core_MainOpcodes.h */,
+				ED36502D1D7AFAE400A6383B /* Z80Core_MainOpcodes.cpp */,
+				ED36502E1D7AFAE400A6383B /* Z80Core_CBOpcodes.h */,
+				ED36502F1D7AFAE400A6383B /* Z80Core_CBOpcodes.cpp */,
+				ED3650301D7AFAE400A6383B /* Z80Core_EDOpcodes.h */,
+				ED3650311D7AFAE400A6383B /* Z80Core_EDOpcodes.cpp */,
+				ED3650321D7AFAE400A6383B /* Z80Core_DDOpcodes.h */,
+				ED3650331D7AFAE400A6383B /* Z80Core_DDOpcodes.cpp */,
+				ED3650341D7AFAE400A6383B /* Z80Core_FDOpcodes.h */,
+				ED3650351D7AFAE400A6383B /* Z80Core_FDOpcodes.cpp */,
+				ED3650361D7AFAE400A6383B /* Z80Core_DDCB_FDCBOpcodes.h */,
+				ED3650371D7AFAE400A6383B /* Z80Core_DDCB_FDCBOpcodes.cpp */,
+			);
+			name = "Z80 Core";
+			sourceTree = "<group>";
+		};
+		ED3650221D7AFA9400A6383B /* Assets */ = {
+			isa = PBXGroup;
+			children = (
+				ED3650151D7AFA6D00A6383B /* Assets.xcassets */,
+			);
+			name = Assets;
+			sourceTree = "<group>";
+		};
+		ED3650231D7AFA9F00A6383B /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				ED3650171D7AFA6D00A6383B /* MainMenu.xib */,
+			);
+			name = UI;
+			sourceTree = "<group>";
+		};
+		ED3650241D7AFAA500A6383B /* View Controllers */ = {
+			isa = PBXGroup;
+			children = (
+				ED3650421D7AFB4000A6383B /* ViewEventProtocol.h */,
+				ED3650431D7AFB6B00A6383B /* EmulationViewController.h */,
+				ED3650441D7AFB6B00A6383B /* EmulationViewController.m */,
+				ED3650451D7AFB6B00A6383B /* EmulationViewController.xib */,
+			);
+			name = "View Controllers";
+			sourceTree = "<group>";
+		};
+		ED3650251D7AFAB200A6383B /* App Delegate */ = {
+			isa = PBXGroup;
+			children = (
+				ED36500F1D7AFA6D00A6383B /* AppDelegate.h */,
+				ED3650101D7AFA6D00A6383B /* AppDelegate.m */,
+			);
+			name = "App Delegate";
+			sourceTree = "<group>";
+		};
+		ED3650261D7AFAC000A6383B /* Machines */ = {
+			isa = PBXGroup;
+			children = (
+				ED36503F1D7AFAF000A6383B /* ZXSpectrum48.h */,
+				ED3650401D7AFAF000A6383B /* ZXSpectrum48.mm */,
+			);
+			name = Machines;
+			sourceTree = "<group>";
+		};
+		ED36504A1D7B21B100A6383B /* EmuApplication */ = {
+			isa = PBXGroup;
+			children = (
+				ED36504B1D7B21C900A6383B /* EmuApplication.h */,
+				ED36504C1D7B21C900A6383B /* EmuApplication.m */,
+			);
+			name = EmuApplication;
+			sourceTree = "<group>";
+		};
+		ED36504E1D7B2BE900A6383B /* Audio Core */ = {
+			isa = PBXGroup;
+			children = (
+				ED36504F1D7B2C0700A6383B /* AudioCore.h */,
+				ED3650501D7B2C0700A6383B /* AudioCore.m */,
+			);
+			name = "Audio Core";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		ED36500B1D7AFA6D00A6383B /* ZXRetroEmulator */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = ED36501D1D7AFA6D00A6383B /* Build configuration list for PBXNativeTarget "ZXRetroEmulator" */;
+			buildPhases = (
+				ED3650081D7AFA6D00A6383B /* Sources */,
+				ED3650091D7AFA6D00A6383B /* Frameworks */,
+				ED36500A1D7AFA6D00A6383B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ZXRetroEmulator;
+			productName = ZXRetroEmulator;
+			productReference = ED36500C1D7AFA6D00A6383B /* ZXRetroEmulator.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		ED3650041D7AFA6D00A6383B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0730;
+				ORGANIZATIONNAME = "71Squared Ltd";
+				TargetAttributes = {
+					ED36500B1D7AFA6D00A6383B = {
+						CreatedOnToolsVersion = 7.3.1;
+					};
+				};
+			};
+			buildConfigurationList = ED3650071D7AFA6D00A6383B /* Build configuration list for PBXProject "ZXRetroEmulator" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = ED3650031D7AFA6D00A6383B;
+			productRefGroup = ED36500D1D7AFA6D00A6383B /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				ED36500B1D7AFA6D00A6383B /* ZXRetroEmulator */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		ED36500A1D7AFA6D00A6383B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ED3650161D7AFA6D00A6383B /* Assets.xcassets in Resources */,
+				ED3650471D7AFB6B00A6383B /* EmulationViewController.xib in Resources */,
+				ED3650281D7AFADA00A6383B /* 48.ROM in Resources */,
+				ED3650191D7AFA6D00A6383B /* MainMenu.xib in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		ED3650081D7AFA6D00A6383B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ED3650411D7AFAF000A6383B /* ZXSpectrum48.mm in Sources */,
+				ED36503C1D7AFAE400A6383B /* Z80Core_DDOpcodes.cpp in Sources */,
+				ED36504D1D7B21C900A6383B /* EmuApplication.m in Sources */,
+				ED3650391D7AFAE400A6383B /* Z80Core_MainOpcodes.cpp in Sources */,
+				ED36503A1D7AFAE400A6383B /* Z80Core_CBOpcodes.cpp in Sources */,
+				ED3650141D7AFA6D00A6383B /* main.m in Sources */,
+				ED36503E1D7AFAE400A6383B /* Z80Core_DDCB_FDCBOpcodes.cpp in Sources */,
+				ED3650381D7AFAE400A6383B /* Z80Core.cpp in Sources */,
+				ED36503B1D7AFAE400A6383B /* Z80Core_EDOpcodes.cpp in Sources */,
+				ED3650111D7AFA6D00A6383B /* AppDelegate.m in Sources */,
+				ED3650461D7AFB6B00A6383B /* EmulationViewController.m in Sources */,
+				ED3650511D7B2C0700A6383B /* AudioCore.m in Sources */,
+				ED36503D1D7AFAE400A6383B /* Z80Core_FDOpcodes.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		ED3650171D7AFA6D00A6383B /* MainMenu.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				ED3650181D7AFA6D00A6383B /* Base */,
+			);
+			name = MainMenu.xib;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		ED36501B1D7AFA6D00A6383B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		ED36501C1D7AFA6D00A6383B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		ED36501E1D7AFA6D00A6383B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = ZXRetroEmulator/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.71squared.ZXRetroEmulator;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		ED36501F1D7AFA6D00A6383B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = ZXRetroEmulator/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.71squared.ZXRetroEmulator;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		ED3650071D7AFA6D00A6383B /* Build configuration list for PBXProject "ZXRetroEmulator" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ED36501B1D7AFA6D00A6383B /* Debug */,
+				ED36501C1D7AFA6D00A6383B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		ED36501D1D7AFA6D00A6383B /* Build configuration list for PBXNativeTarget "ZXRetroEmulator" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ED36501E1D7AFA6D00A6383B /* Debug */,
+				ED36501F1D7AFA6D00A6383B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = ED3650041D7AFA6D00A6383B /* Project object */;
+}

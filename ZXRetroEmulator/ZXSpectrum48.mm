@@ -1,0 +1,802 @@
+//
+//  ZXSpectrum48.m
+//  ZXRetroEmu
+//
+//  Created by Mike Daley on 02/09/2016.
+//  Copyright © 2016 71Squared Ltd. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "ZXSpectrum48.h"
+#import "Z80Core.h"
+#import "AudioCore.h"
+
+#pragma mark - Private Interface
+
+@interface ZXSpectrum48 ()
+
+// Emulation queue and timer
+@property (weak) NSView *emulationView;
+@property (strong) dispatch_queue_t emulationQueue;
+@property (strong) dispatch_source_t emulationTimer;
+@property (assign) CGColorSpaceRef colourSpace;
+@property (strong) id imageRef;
+@property (strong) NSString *snapshotPath;
+@property (strong) AudioCore *audioCore;
+
+@end
+
+#pragma mark - Structures 
+
+// Structure of pixel data used in the emulation display buffer
+struct PixelData {
+    uint8 r;
+    uint8 g;
+    uint8 b;
+    uint8 a;
+};
+
+// Keyboard data structure
+struct KeyboardEntry {
+    int keyCode;
+    int mapEntry;
+    int mapBit;
+};
+
+#pragma mark - Enums
+
+typedef enum : NSUInteger {
+    None,
+    Reset,
+    Snapshot,
+} EventType;
+
+#pragma mark - Variables
+
+// Z80 CPU core
+CZ80Core *core;
+
+// Main Memory
+unsigned char memory[64 * 1024];
+
+// Memory and IO contention tables
+static unsigned char contentionValues[8] = {6, 5, 4, 3, 2, 1, 0, 0};
+unsigned char memoryContentionTable[69888];
+unsigned char ioContentionTable[69888];
+
+// Machine specific tState values
+int tsPerFrame;
+int tsPerLine;
+int tsTopBorder;
+int tsBottomBorder;
+int tsLeftBorder;
+int tsRightBorder;
+int tsVerticalBlank;
+int tsVerticalDisplay;
+int tsHorizontalDisplay;
+
+// Machine specific pixel values
+int pxTopBorder;
+int pxBottomBorder;
+int pxLeftBorder;
+int pxRightBorder;
+int pxVerticalBlank;
+int pxHorizontalDisplay;
+int pxVerticalDisplay;
+int pxHorizontalTotal;
+int pxVerticalTotal;
+
+// Display values
+int borderColour;
+int frameCounter;
+int emuDisplayBitsPerPx;
+int emuDisplayBitsPerComponent;
+int emuDisplayBytesPerPx;
+unsigned int emuDisplayBufferLength;
+int emuDisplayPxWidth;
+int emuDisplayPxHeight;
+int pxVerticalDisplayTotal;
+unsigned char *emuDisplayBuffer;
+bool emuShouldInterpolate;
+int pixelBeamX;
+int pixelBeamY;
+
+// Audio
+int audioStepTStates;
+float audioValue;
+int audioTStates;
+bool beeperOn;
+
+// Events
+
+EventType event;
+
+// Pallette
+
+PixelData pallette[] = {
+  
+    // Normal colours
+    {0, 0, 0, 255},     // Black
+    {0, 0, 224, 255},     // Blue
+    {224, 0, 0, 255},   // Red
+    {224, 0, 224, 255},   // Green
+    {0, 224, 0, 255},     // Magenta
+    {0, 224, 224, 255},     // Cyan
+    {224, 224, 0, 255},   // Yellow
+    {224, 224, 224, 255},   // White
+        
+    // Bright colours
+    {0, 0, 0, 255},
+    {0, 0, 255, 255},
+    {255, 0, 0, 255},
+    {255, 0, 255, 255},
+    {0, 255, 0, 255},
+    {0, 255, 255, 255},
+    {255, 255, 0, 255},
+    {255, 255, 255, 255}
+
+};
+
+// Keyboard Data
+unsigned char keyboardMap[8];
+
+KeyboardEntry keyboardLookup[] = {
+  
+    { 6, 0,	1 },
+    { 7, 0,	2 },
+    { 8, 0,	3 },
+    { 9, 0,	4 },
+    
+    { 0, 1,	0 },
+    { 1, 1,	1 },
+    { 2, 1,	2 },
+    { 3, 1,	3 },
+    { 5, 1,	4 },
+    
+    { 12, 2, 0 },
+    { 13, 2, 1 },
+    { 14, 2, 2 },
+    { 15, 2, 3 },
+    { 17, 2, 4 },
+    
+    { 18, 3, 0 },
+    { 19, 3, 1 },
+    { 20, 3, 2 },
+    { 21, 3, 3 },
+    { 23, 3, 4 },
+    
+    { 29, 4, 0 },
+    { 25, 4, 1 },
+    { 28, 4, 2 },
+    { 26, 4, 3 },
+    { 22, 4, 4 },
+    
+    { 35, 5, 0 },
+    { 31, 5, 1 },
+    { 34, 5, 2 },
+    { 32, 5, 3 },
+    { 16, 5, 4 },
+    
+    { 36, 6, 0 },
+    { 37, 6, 1 },
+    { 40, 6, 2 },
+    { 38, 6, 3 },
+    { 4,  6, 4 },
+    
+    { 49, 7, 0 },
+    { 46, 7, 2 },
+    { 45, 7, 3 },
+    { 11, 7, 4 }
+    
+};
+
+#pragma mark - Implementation
+
+@implementation ZXSpectrum48
+
+- (instancetype)initWithEmulationScreenView:(NSView *)view
+{
+    self = [super init];
+    if (self) {
+        
+        _emulationView = view;
+        
+        core = new CZ80Core;
+        core->Initialise(coreMemoryRead, coreMemoryWrite, coreIORead, coreIOWrite, coreMemoryContention, coreIOContention, 0);
+        
+        event = None;
+        
+        pxTopBorder = 56;
+        pxBottomBorder = 56;
+        pxLeftBorder = 32;
+        pxRightBorder = 64;
+        pxVerticalBlank = 8;
+        pxHorizontalDisplay = 256;
+        pxVerticalDisplay = 192;
+        pxHorizontalTotal = 448;
+        pxVerticalTotal = 312;
+        
+        tsPerFrame = 69888;
+        tsPerLine = 224;
+        tsTopBorder = pxTopBorder * tsPerLine;
+        tsBottomBorder = pxBottomBorder * tsPerLine;
+        tsLeftBorder = pxLeftBorder * tsPerLine;
+        tsRightBorder = pxRightBorder * tsPerLine;
+        tsVerticalBlank = pxVerticalBlank * tsPerLine;
+        tsVerticalDisplay = pxVerticalDisplay * tsPerLine;
+        tsHorizontalDisplay = 128;
+        
+        borderColour = 1;
+        frameCounter = 0;
+        
+        _colourSpace = CGColorSpaceCreateDeviceRGB();
+        
+        emuShouldInterpolate = YES;
+        emuDisplayBitsPerPx = 32;
+        emuDisplayBitsPerComponent = 8;
+        emuDisplayBytesPerPx = 4;
+        
+        emuDisplayPxWidth = pxLeftBorder + pxHorizontalDisplay + pxRightBorder;
+        emuDisplayPxHeight = pxTopBorder + pxVerticalDisplay + pxBottomBorder;
+        
+        emuDisplayBufferLength = (emuDisplayPxWidth * emuDisplayPxHeight) * emuDisplayBytesPerPx;
+        emuDisplayBuffer = (unsigned char *)malloc(emuDisplayBufferLength);
+        
+        pixelBeamX = 32;
+        pixelBeamY = 0;
+        
+        _audioCore = [[AudioCore alloc] initWithSampleRate:44100 framesPerSecond:50];
+        
+        audioStepTStates = (tsPerFrame * 50) / 44100;
+        
+        [self buildContentionTable];
+        [self resetKeyboardMap];
+        [self loadROM];
+        
+        float fps = 50.0;
+        
+        _emulationQueue = dispatch_queue_create("emulationQueue", nil);
+        _emulationTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, _emulationQueue);
+        dispatch_source_set_timer(_emulationTimer, DISPATCH_TIME_NOW, 1.0/fps * NSEC_PER_SEC, 0);
+        
+        dispatch_source_set_event_handler(_emulationTimer, ^{
+            
+            switch (event) {
+                case None:
+                    break;
+
+                case Reset:
+                    event = None;
+                    [self reset];
+                    break;
+                    
+                case Snapshot:
+                    [self reset];
+                    [self loadSnapshot];
+                    event = None;
+                    break;
+                    
+                default:
+                    break;
+            }
+            
+            [self runFrame];
+            [self generateImage];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                self.emulationView.layer.contents = self.imageRef;
+            });
+        });
+        
+    }
+    return self;
+}
+
+- (void)startExecution {
+    dispatch_resume(_emulationTimer);
+}
+
+- (void)stopExecution {
+    dispatch_suspend(_emulationTimer);
+}
+
+#pragma mark - CPU
+
+- (void)reset {
+    core->Reset();
+    frameCounter = 0;
+    beeperOn = false;
+    pixelBeamX = 32;
+    pixelBeamY = 0;
+    [self resetKeyboardMap];
+}
+
+- (void)runFrame {
+    
+    int count = tsPerFrame;
+    while (count > 0) {
+        count -= [self step];
+    }
+    
+}
+
+- (int)step {
+    
+    int tsCPU = core->Execute(1);
+    
+    updateScreenWithTStates(tsCPU);
+    [self updateAudioWithTStates:tsCPU];
+    
+    if (core->GetTStates() >= tsPerFrame) {
+        core->ResetTStates(tsPerFrame);
+        core->SignalInterrupt();
+        pixelBeamX = 32;
+        frameCounter++;
+    }
+    
+    return tsCPU;
+}
+
+#pragma mark - Display
+
+static void updateScreenWithTStates(int tstates) {
+    
+    for (int i = 0; i < (tstates << 1); i++) {
+        
+        int x = pixelBeamX + pxLeftBorder;
+        int y = pixelBeamY - pxVerticalBlank;
+        
+        if (x >= pxHorizontalTotal) {
+            x -= pxHorizontalTotal;
+            y += 1;
+        }
+        
+        int displayBufferIndex = ((y * emuDisplayPxWidth) + x) * emuDisplayBytesPerPx;
+        
+        if (y >= 0 && y < emuDisplayPxHeight && x < emuDisplayPxWidth) {
+            
+            if (y < pxTopBorder || y >= pxTopBorder + pxVerticalDisplay) {
+
+                emuDisplayBuffer[displayBufferIndex] = pallette[borderColour].r;
+                emuDisplayBuffer[displayBufferIndex + 1] = pallette[borderColour].g;
+                emuDisplayBuffer[displayBufferIndex + 2] = pallette[borderColour].b;
+                emuDisplayBuffer[displayBufferIndex + 3] = pallette[borderColour].a;
+                
+            } else {
+                
+                if (x < pxLeftBorder || x >= (pxLeftBorder + pxHorizontalDisplay)) {
+
+                    emuDisplayBuffer[displayBufferIndex] = pallette[borderColour].r;
+                    emuDisplayBuffer[displayBufferIndex + 1] = pallette[borderColour].g;
+                    emuDisplayBuffer[displayBufferIndex + 2] = pallette[borderColour].b;
+                    emuDisplayBuffer[displayBufferIndex + 3] = pallette[borderColour].a;
+                    
+                } else {
+                    
+
+                    int px = x - pxLeftBorder;
+                    int py = y - pxTopBorder;
+                    
+                    int pxAddr = 16384 + (px >> 3) + ((py & 0x07) << 8) + ((py & 0x38) << 2) + ((py & 0xc0) << 5);
+                    int attrAddr = 16384 + (32 * 192) + (px >> 3) + ((py >> 3) << 5);
+                    
+                    int pxByte = memory[ pxAddr ];
+                    int attrByte = memory[ attrAddr ];
+                    
+                    int ink = (attrByte & 0x07) + ((attrByte & 0x40) >> 3);
+                    int paper = ((attrByte >> 3) & 0x07) + ((attrByte & 0x40) >> 3);
+                    
+                    if ((frameCounter & 16) && (attrByte & 0x80)) {
+                        paper = paper ^ ink;
+                        ink = paper ^ ink;
+                        paper = paper ^ ink;
+                    }
+                    
+                    if (pxByte & (0x80 >> (px & 7))) {
+                        emuDisplayBuffer[displayBufferIndex] = pallette[ink].r;
+                        emuDisplayBuffer[displayBufferIndex + 1] = pallette[ink].g;
+                        emuDisplayBuffer[displayBufferIndex + 2] = pallette[ink].b;
+                        emuDisplayBuffer[displayBufferIndex + 3] = pallette[ink].a;
+                    } else {
+                        emuDisplayBuffer[displayBufferIndex] = pallette[paper].r;
+                        emuDisplayBuffer[displayBufferIndex + 1] = pallette[paper].g;
+                        emuDisplayBuffer[displayBufferIndex + 2] = pallette[paper].b;
+                        emuDisplayBuffer[displayBufferIndex + 3] = pallette[paper].a;
+                    }
+                    
+                }
+                
+            }
+        }
+        
+        pixelBeamX += 1;
+        
+        if (pixelBeamX >= pxHorizontalTotal) {
+            pixelBeamX -= pxHorizontalTotal;
+            pixelBeamY += 1;
+            
+            if (pixelBeamY >= pxVerticalTotal) {
+                pixelBeamY -= pxVerticalTotal;
+            }
+        }
+    }
+    
+}
+
+- (void)generateImage {
+    
+    CFDataRef dataRef = CFDataCreate(kCFAllocatorDefault, emuDisplayBuffer, emuDisplayBufferLength);
+    
+    CGDataProviderRef providerRef = CGDataProviderCreateWithCFData(dataRef);
+    
+    _imageRef = CFBridgingRelease(CGImageCreate(emuDisplayPxWidth,
+                                                emuDisplayPxHeight,
+                                                emuDisplayBitsPerComponent,
+                                                emuDisplayBitsPerPx,
+                                                emuDisplayPxWidth * emuDisplayBytesPerPx,
+                                                _colourSpace,
+                                                (CGBitmapInfo)kCGImageAlphaPremultipliedLast,
+                                                providerRef,
+                                                nil,
+                                                emuShouldInterpolate,
+                                                kCGRenderingIntentDefault));
+    
+    // Clean up
+    CGDataProviderRelease(providerRef);
+    CFRelease(dataRef);
+}
+
+#pragma mark - Audio
+
+- (void)updateAudioWithTStates:(int)numberTs {
+    
+    while (audioTStates + numberTs > audioStepTStates) {
+        
+        int tStates = audioStepTStates - audioTStates;
+        
+        audioValue += beeperOn ? (8192 * tStates) : 0;
+        
+        [self.audioCore updateBeeperAudioWithValue:audioValue / audioStepTStates];
+        
+        numberTs = (audioTStates + numberTs) - audioStepTStates;
+        audioValue = 0;
+        audioTStates = 0;
+        
+    }
+    
+    audioValue += beeperOn ? (8192 * numberTs) : 0;
+    audioTStates += numberTs;
+}
+
+#pragma mark - Memory & IO methods
+
+static unsigned char coreMemoryRead(unsigned short address, int tstates) {
+    return memory[address];
+}
+
+static void coreMemoryWrite(unsigned short address, unsigned char data, int tstates) {
+    if (address >= 16384) {
+        memory[address] = data;
+    }
+}
+
+static unsigned char coreIORead(unsigned short address, int tstates) {
+    
+    // Calculate the necessary contention based on the Port number being accessed and if the port belongs to the ULA.
+    // All non-even port numbers below to the ULA. N:x means no contention to be added and just advance the tStates.
+    // C:x means that contention should be calculated based on the current tState value and then x tStates are to be
+    // added to the current tState count
+    //
+    // in 40 - 7F?| Low bit | Contention pattern
+    //------------+---------+-------------------
+    //		No    |  Reset  | N:1, C:3
+    //		No    |   Set   | N:4
+    //		Yes   |  Reset  | C:1, C:3
+    //		Yes   |   Set   | C:1, C:1, C:1, C:1
+    //
+    if (address >= 16384 && address <= 32767) {
+        if ((address & 1) == 0) {
+            core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+            core->AddTStates(1);
+            core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+            core->AddTStates(3);
+        } else {
+            core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+            core->AddTStates(1);
+            core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+            core->AddTStates(1);
+            core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+            core->AddTStates(1);
+            core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+            core->AddTStates(1);
+        }
+    } else {
+        if ((address & 1) == 0) {
+            core->AddTStates(1);
+            core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+            core->AddTStates(3);
+        } else {
+            core->AddTStates(4);
+        }
+    }
+    
+    if ((address & 0xff) == 0xfe) {
+        for (int i = 0; i < 8; i++) {
+            int addr = address & (0x100 << i);
+            if (addr == 0) {
+                return keyboardMap[i] & 0xff;
+            }
+        }
+    }
+    
+    return 0xff;
+}
+
+static void coreIOWrite(unsigned short address, unsigned char data, int tstates) {
+    
+    // Calculate the necessary contention based on the Port number being accessed and if the port belongs to the ULA.
+    // All non-even port numbers below to the ULA. N:x means no contention to be added and just advance the tStates.
+    // C:x means that contention should be calculated based on the current tState value and then x tStates are to be
+    // added to the current tState count
+    //
+    // in 40 - 7F?| Low bit | Contention pattern
+    //------------+---------+-------------------
+    //		No    |  Reset  | N:1, C:3
+    //		No    |   Set   | N:4
+    //		Yes   |  Reset  | C:1, C:3
+    //		Yes   |   Set   | C:1, C:1, C:1, C:1
+    //
+    if (address >= 16384 && address <= 32767) {
+        if ((address & 1) == 0) {
+            core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+            core->AddTStates(1);
+            core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+            core->AddTStates(3);
+        } else {
+            core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+            core->AddTStates(1);
+            core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+            core->AddTStates(1);
+            core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+            core->AddTStates(1);
+            core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+            core->AddTStates(1);
+        }
+    } else {
+        if ((address & 1) == 0) {
+            core->AddTStates(1);
+            core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+            core->AddTStates(3);
+        } else {
+            core->AddTStates(4);
+        }
+    }
+    
+    if ((address & 0xff) == 0xfe) {
+        borderColour = data & 0x07;
+        beeperOn = (data & 0x10) ? true : false;
+    }
+}
+
+static void coreMemoryContention(unsigned short address, unsigned int tstates, int param) {
+    
+    if (address >= 16384 && address <= 32767) {
+        core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+    }
+    
+}
+
+static void coreIOContention(unsigned short address, unsigned int tstates, int param) {
+    if (address >= 16384 && address <= 32767) {
+        core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+    }
+    
+}
+
+#pragma mark - Contention Tables
+
+- (void)buildContentionTable {
+    
+    for (int i = 0; i < tsPerFrame; i++) {
+        
+        memoryContentionTable[i] = 0;
+        ioContentionTable[i] = 0;
+        
+        int ts = i - ((tsTopBorder + tsVerticalBlank) - 1);
+
+        if (ts >= 0 && ts < (int)tsVerticalDisplay) {
+            int perLine = ts % tsPerLine;
+            if (perLine < tsHorizontalDisplay) {
+                memoryContentionTable[i] = contentionValues[perLine & 7];
+                ioContentionTable[i] = contentionValues[perLine & 7];
+            }
+        }
+    }
+}
+
+#pragma mark - Load ROM
+
+- (void)loadROM {
+    
+    NSString *path = [[NSBundle mainBundle] pathForResource:@"48" ofType:@"ROM"];
+    NSData *rom = [NSData dataWithContentsOfFile:path];
+    
+    const char *fileBytes = (const char*)[rom bytes];
+    
+    for (int addr = 0; addr < rom.length; addr++) {
+        memory[addr] = fileBytes[addr];
+    }
+}
+
+#pragma mark - SnapShot
+
+- (void)loadSnapshotWithPath:(NSString *)path {
+    self.snapshotPath = path;
+    event = Snapshot;
+}
+
+- (void)loadSnapshot {
+    
+    NSData *data = [NSData dataWithContentsOfFile:self.snapshotPath];
+    
+    const char *fileBytes = (const char*)[data bytes];
+    
+    if (data.length == 49179) {
+        
+        int snaAddr = 27;
+        for (int i= 16384; i < (48 * 1024) + 16384; i++) {
+            memory[i] = fileBytes[snaAddr++];
+        }
+        
+        // Decode the header
+        core->SetRegister(CZ80Core::eREG_I, fileBytes[0]);
+        core->SetRegister(CZ80Core::eREG_R, fileBytes[20]);
+        core->SetRegister(CZ80Core::eREG_ALT_HL, ((unsigned short *)&fileBytes[1])[0]);
+        core->SetRegister(CZ80Core::eREG_ALT_DE, ((unsigned short *)&fileBytes[1])[1]);
+        core->SetRegister(CZ80Core::eREG_ALT_BC, ((unsigned short *)&fileBytes[1])[2]);
+        core->SetRegister(CZ80Core::eREG_ALT_AF, ((unsigned short *)&fileBytes[1])[3]);
+        core->SetRegister(CZ80Core::eREG_HL, ((unsigned short *)&fileBytes[1])[4]);
+        core->SetRegister(CZ80Core::eREG_DE, ((unsigned short *)&fileBytes[1])[5]);
+        core->SetRegister(CZ80Core::eREG_BC, ((unsigned short *)&fileBytes[1])[6]);
+        core->SetRegister(CZ80Core::eREG_IY, ((unsigned short *)&fileBytes[1])[7]);
+        core->SetRegister(CZ80Core::eREG_IX, ((unsigned short *)&fileBytes[1])[8]);
+        
+        core->SetRegister(CZ80Core::eREG_AF, ((unsigned short *)&fileBytes[21])[0]);
+        core->SetRegister(CZ80Core::eREG_SP, ((unsigned short *)&fileBytes[21])[1]);
+        
+        // Border colour
+        borderColour = fileBytes[26];
+        
+        // Set the IM
+        core->SetIMMode(fileBytes[25]);
+        
+        // Do both on bit 2 as a RETN copies IFF2 to IFF1
+        core->SetIFF1((fileBytes[19] >> 2) & 1);
+        core->SetIFF2((fileBytes[19] >> 2) & 1);
+        
+        // Set the PC
+        unsigned char pc_lsb = memory[core->GetRegister(CZ80Core::eREG_SP)];
+        unsigned char pc_msb = memory[core->GetRegister(CZ80Core::eREG_SP) + 1];
+        core->SetRegister(CZ80Core::eREG_PC, (pc_msb << 8) | pc_lsb);
+        core->SetRegister(CZ80Core::eREG_SP, core->GetRegister(CZ80Core::eREG_SP) + 2);
+        
+    }
+}
+
+#pragma mark - View Event Protocol Methods
+
+- (void)keyDown:(NSEvent *)theEvent {
+    
+    switch (theEvent.keyCode) {
+        case 51: // Backspace
+            keyboardMap[0] &= ~0x01; // Shift
+            keyboardMap[4] &= ~0x01; // 0
+            break;
+            
+        case 126: // Arrow up
+            keyboardMap[0] &= ~0x01; // Shift
+            keyboardMap[4] &= ~0x08; // 7
+            break;
+            
+        case 125: // Arrow down
+            keyboardMap[0] &= ~0x01; // Shift
+            keyboardMap[4] &= ~0x10; // 6
+            break;
+            
+        case 123: // Arrow left
+            keyboardMap[0] &= ~0x01; // Shift
+            keyboardMap[3] &= ~0x10; // 5
+            break;
+            
+        case 124: // Arrow right
+            keyboardMap[0] &= ~0x01; // Shift
+            keyboardMap[4] &= ~0x04; // 8
+            break;
+            
+        default:
+            for (NSUInteger i = 0; i < sizeof(keyboardLookup) / sizeof(keyboardLookup[0]); i++) {
+                
+                if (keyboardLookup[i].keyCode == theEvent.keyCode) {
+                    keyboardMap[keyboardLookup[i].mapEntry] &= ~(1 << keyboardLookup[i].mapBit);
+                    break;
+                }
+            }
+            break;
+    }
+    
+    
+}
+
+- (void)keyUp:(NSEvent *)theEvent {
+    
+    switch (theEvent.keyCode) {
+        case 51: // Backspace
+            keyboardMap[0] |= 0x01; // Shift
+            keyboardMap[4] |= 0x01; // 0
+            break;
+            
+        case 126: // Arrow up
+            keyboardMap[0] |= 0x01; // Shift
+            keyboardMap[4] |= 0x08; // 7
+            break;
+            
+        case 125: // Arrow down
+            keyboardMap[0] |= 0x01; // Shift
+            keyboardMap[4] |= 0x10; // 6
+            break;
+            
+        case 123: // Arrow left
+            keyboardMap[0] |= 0x01; // Shift
+            keyboardMap[3] |= 0x10; // 5
+            break;
+            
+        case 124: // Arrow right
+            keyboardMap[0] |= 0x01; // Shift
+            keyboardMap[4] |= 0x04; // 8
+            break;
+            
+        default:
+            for (NSUInteger i = 0; i < sizeof(keyboardLookup) / sizeof(keyboardLookup[0]); i++) {
+                
+                if (keyboardLookup[i].keyCode == theEvent.keyCode) {
+                    keyboardMap[keyboardLookup[i].mapEntry] |= (1 << keyboardLookup[i].mapBit);
+                    break;
+                }
+            }
+            break;
+    }
+    
+}
+
+- (void)flagsChanged:(NSEvent *)theEvent {
+    
+    switch (theEvent.keyCode) {
+        case 56: // Left Shift
+        case 60: // Right Shift
+            if (theEvent.modifierFlags & NSShiftKeyMask) {
+                keyboardMap[0] &= ~0x01;
+            } else {
+                keyboardMap[0] |= 0x01;
+            }
+            break;
+        case 59: // Control
+            if (theEvent.modifierFlags & NSControlKeyMask) {
+                keyboardMap[7] &= ~0x02;
+            } else {
+                keyboardMap[7] |= 0x02;
+            }
+            
+        default:
+            break;
+    }
+    
+}
+
+- (void)resetKeyboardMap {
+    
+    for (int i = 0; i < 8; i++) {
+        keyboardMap[i] = 0xff;
+    }
+    
+}
+
+@end
