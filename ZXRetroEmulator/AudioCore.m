@@ -48,7 +48,17 @@
         _audioEngine = [AVAudioEngine new];
         _playerNode = [AVAudioPlayerNode new];
         _mixerNode = [_audioEngine mainMixerNode];
-        [_mixerNode setOutputVolume:0.1];
+        [_mixerNode setOutputVolume:0.5];
+        
+        // Playing with improving the sound output using filters :)
+        AVAudioUnitEQ *eqnode = [[AVAudioUnitEQ alloc] initWithNumberOfBands:2];
+        eqnode.globalGain = 1;
+        [_audioEngine attachNode:eqnode];
+        AVAudioUnitEQFilterParameters *params = eqnode.bands[0];
+        params.filterType = AVAudioUnitEQFilterTypeBandPass;
+        params.bandwidth = 0.5;
+        params.frequency = 1000.0;
+        params.gain = 15;
         
         AVAudioFormat *audioFormat = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32 sampleRate:sampleRate channels:1 interleaved:NO];
         
@@ -63,6 +73,7 @@
         
         [_audioEngine attachNode:_playerNode];
         [_audioEngine connect:_playerNode to:_mixerNode format:audioFormat];
+        [_audioEngine connect:eqnode to:_mixerNode format:audioFormat];
         
         [_audioEngine startAndReturnError:nil];
         [_playerNode play];
@@ -77,7 +88,7 @@
 {
     AVAudioPCMBuffer *buffer = [self.buffers objectAtIndex:self.currentBuffer];
     float * const data = buffer.floatChannelData[0];
-    data[_currentBufferPosition++] = value * 0.003f;
+    data[_currentBufferPosition++] = value * 0.001f;
     
     if (self.currentBufferPosition > self.frameCapcity) {
         [self.playerNode scheduleBuffer:buffer completionHandler:nil];

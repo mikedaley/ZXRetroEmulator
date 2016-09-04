@@ -141,7 +141,6 @@ PixelData pallette[] = {
 unsigned char keyboardMap[8];
 
 KeyboardEntry keyboardLookup[] = {
-  
     { 6, 0,	1 },
     { 7, 0,	2 },
     { 8, 0,	3 },
@@ -187,7 +186,6 @@ KeyboardEntry keyboardLookup[] = {
     { 46, 7, 2 },
     { 45, 7, 3 },
     { 11, 7, 4 }
-    
 };
 
 #pragma mark - Implementation
@@ -323,13 +321,18 @@ KeyboardEntry keyboardLookup[] = {
     
     int tsCPU = core->Execute(1);
     
-    updateScreenWithTStates(tsCPU);
+    [self updateSreenWithTStates:tsCPU];
     [self updateAudioWithTStates:tsCPU];
     
     if (core->GetTStates() >= tsPerFrame) {
+        
         core->ResetTStates(tsPerFrame);
         core->SignalInterrupt();
+        
+        // Looks like we need to add 32px to the start position in the screen image. This kinda makes sense
+        // as tState 0 of a frame is actually 32 pixels into the screen at the start of the vblank.
         pixelBeamX = 32;
+        
         frameCounter++;
     }
     
@@ -338,7 +341,7 @@ KeyboardEntry keyboardLookup[] = {
 
 #pragma mark - Display
 
-static void updateScreenWithTStates(int tstates) {
+- (void)updateSreenWithTStates:(int)tstates {
     
     for (int i = 0; i < (tstates << 1); i++) {
         
@@ -404,7 +407,6 @@ static void updateScreenWithTStates(int tstates) {
                     }
                     
                 }
-                
             }
         }
         
@@ -453,7 +455,7 @@ static void updateScreenWithTStates(int tstates) {
         
         int tStates = audioStepTStates - audioTStates;
         
-        audioValue += beeperOn ? (8192 * tStates) : 0;
+        audioValue += beeperOn ? (2048 * tStates) : 0;
         
         [self.audioCore updateBeeperAudioWithValue:audioValue / audioStepTStates];
         
@@ -463,7 +465,7 @@ static void updateScreenWithTStates(int tstates) {
         
     }
     
-    audioValue += beeperOn ? (8192 * numberTs) : 0;
+    audioValue += beeperOn ? (2048 * numberTs) : 0;
     audioTStates += numberTs;
 }
 
@@ -474,6 +476,8 @@ static unsigned char coreMemoryRead(unsigned short address, int tstates) {
 }
 
 static void coreMemoryWrite(unsigned short address, unsigned char data, int tstates) {
+    
+    // Only allow writing to RAM not ROM
     if (address >= 16384) {
         memory[address] = data;
     }
@@ -586,9 +590,6 @@ static void coreMemoryContention(unsigned short address, unsigned int tstates, i
 }
 
 static void coreIOContention(unsigned short address, unsigned int tstates, int param) {
-    if (address >= 16384 && address <= 32767) {
-        core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
-    }
     
 }
 

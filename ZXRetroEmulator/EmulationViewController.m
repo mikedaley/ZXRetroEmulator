@@ -21,6 +21,9 @@
     self.view.wantsLayer = YES;
     self.view.layer.magnificationFilter = kCAFilterNearest;
     
+
+        
+    
 }
 
 - (void)keyUp:(NSEvent *)theEvent {

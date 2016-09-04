@@ -96,13 +96,13 @@
 		ED36500E1D7AFA6D00A6383B /* ZXRetroEmulator */ = {
 			isa = PBXGroup;
 			children = (
-				ED36504E1D7B2BE900A6383B /* Audio Core */,
 				ED36504A1D7B21B100A6383B /* EmuApplication */,
 				ED3650201D7AFA7800A6383B /* ROMS */,
 				ED3650211D7AFA8800A6383B /* Z80 Core */,
 				ED3650231D7AFA9F00A6383B /* UI */,
 				ED3650241D7AFAA500A6383B /* View Controllers */,
 				ED3650251D7AFAB200A6383B /* App Delegate */,
+				ED36504E1D7B2BE900A6383B /* Audio Core */,
 				ED3650261D7AFAC000A6383B /* Machines */,
 				ED3650221D7AFA9400A6383B /* Assets */,
 				ED3650121D7AFA6D00A6383B /* Supporting Files */,
@@ -437,6 +437,7 @@
 				ED36501F1D7AFA6D00A6383B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

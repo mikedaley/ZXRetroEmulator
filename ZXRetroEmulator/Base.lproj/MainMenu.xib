@@ -159,7 +159,7 @@
                             </menuItem>
                             <menuItem title="Toggle Linear/Nearest Filter" keyEquivalent="l" id="rFk-27-tu8">
                                 <connections>
-                                    <action selector="toggleToolbarShown:" target="-1" id="3DA-ra-QGx"/>
+                                    <action selector="toggleFilter:" target="-1" id="cYT-mG-PQh"/>
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="nDY-jR-pgp"/>
@@ -227,9 +227,8 @@
         </menu>
         <window title="ZXRetroEmulator" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" animationBehavior="default" id="QvC-M9-y7g">
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
-            <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
-            <rect key="contentRect" x="335" y="390" width="585" height="472"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="2560" height="1417"/>
+            <rect key="contentRect" x="84" y="219" width="585" height="472"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1280" height="777"/>
             <view key="contentView" id="EiT-Mj-1SZ">
                 <rect key="frame" x="0.0" y="0.0" width="585" height="472"/>
                 <autoresizingMask key="autoresizingMask"/>

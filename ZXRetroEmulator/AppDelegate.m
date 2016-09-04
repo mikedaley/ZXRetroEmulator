@@ -12,6 +12,8 @@
 #import "EmulationViewController.h"
 #import "ZXSpectrum48.h"
 
+#pragma mark = Private Interface
+
 @interface AppDelegate ()
 
 @property (weak) IBOutlet NSWindow *window;
@@ -24,10 +26,29 @@
 
 @end
 
+#pragma mark - Implementation 
+
 @implementation AppDelegate
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
+    
+    [self setupViews];
+    
+    // Setup the machine to be emulated and set it as the delegate for the emaultion view controller. This means view based events such as keyDown,
+    // keyUp and flagsChanged will be passed to _machine for processing
+    _machine = [[ZXSpectrum48 alloc] initWithEmulationScreenView:_emulationViewController.view];
+    _emulationViewController.delegate = _machine;
+    [_machine startExecution];
+}
 
+- (void)applicationWillTerminate:(NSNotification *)aNotification {
+    // Insert code here to tear down your application
+}
+
+#pragma mark - View setup
+
+- (void)setupViews {
+    _window.contentView.wantsLayer = YES;
     [_window.contentView addSubview:_emulationViewController.view];
 
     _emulationViewController.view.translatesAutoresizingMaskIntoConstraints = NO;
@@ -47,16 +68,6 @@
     [_window.contentView addConstraints:horizEmulationConstraint];
     
     [_window makeFirstResponder:_emulationViewController.view];
-    
-    // Setup the machine to be emulated and set it as the delegate for the emaultion view controller. This means view based events such as keyDown,
-    // keyUp and flagsChanged will be passed to _machine for processing
-    _machine = [[ZXSpectrum48 alloc] initWithEmulationScreenView:_emulationViewController.view];
-    _emulationViewController.delegate = _machine;
-    [_machine startExecution];
-}
-
-- (void)applicationWillTerminate:(NSNotification *)aNotification {
-    // Insert code here to tear down your application
 }
 
 #pragma mark - Menu actions
@@ -90,5 +101,12 @@
     }
 }
 
+- (IBAction)toggleFilter:(id)sender {
+    if (_emulationViewController.view.layer.magnificationFilter == kCAFilterNearest) {
+        _emulationViewController.view.layer.magnificationFilter = kCAFilterLinear;
+    } else {
+        _emulationViewController.view.layer.magnificationFilter = kCAFilterNearest;
+    }
+}
 
 @end
