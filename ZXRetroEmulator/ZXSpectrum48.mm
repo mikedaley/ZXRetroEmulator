@@ -95,11 +95,22 @@ int emuDisplayBytesPerPx;
 unsigned int emuDisplayBufferLength;
 int emuDisplayPxWidth;
 int emuDisplayPxHeight;
-int pxVerticalDisplayTotal;
+int emuTopBorderPx;
+int emuBottomBorderPx;
+int emuLeftBorderPx;
+int emuRightBorderPx;
 unsigned char *emuDisplayBuffer;
 bool emuShouldInterpolate;
 int pixelBeamX;
 int pixelBeamY;
+int frameTs;
+
+int emuLeftBorderChars;
+int emuRightBorderChars;
+int emuTopBorderLines;
+int emuBottomBorderLines;
+int emuBeamXMax;
+int emuBeamYMax;
 
 // Audio
 int audioStepTStates;
@@ -116,14 +127,14 @@ EventType event;
 PixelData pallette[] = {
   
     // Normal colours
-    {0, 0, 0, 255},     // Black
-    {0, 0, 224, 255},     // Blue
-    {224, 0, 0, 255},   // Red
-    {224, 0, 224, 255},   // Green
-    {0, 224, 0, 255},     // Magenta
-    {0, 224, 224, 255},     // Cyan
-    {224, 224, 0, 255},   // Yellow
-    {224, 224, 224, 255},   // White
+    {0, 0, 0, 255},         // Black
+    {0, 0, 204, 255},       // Blue
+    {204, 0, 0, 255},       // Red
+    {204, 0, 204, 255},     // Green
+    {0, 204, 0, 255},       // Magenta
+    {0, 204, 204, 255},     // Cyan
+    {204, 204, 0, 255},     // Yellow
+    {204, 204, 204, 255},   // White
         
     // Bright colours
     {0, 0, 0, 255},
@@ -141,51 +152,51 @@ PixelData pallette[] = {
 unsigned char keyboardMap[8];
 
 KeyboardEntry keyboardLookup[] = {
-    { 6, 0,	1 },
-    { 7, 0,	2 },
-    { 8, 0,	3 },
-    { 9, 0,	4 },
+    { 6, 0,	1 },    // Z
+    { 7, 0,	2 },    // X
+    { 8, 0,	3 },    // C
+    { 9, 0,	4 },    // V
     
-    { 0, 1,	0 },
-    { 1, 1,	1 },
-    { 2, 1,	2 },
-    { 3, 1,	3 },
-    { 5, 1,	4 },
+    { 0, 1,	0 },    // A
+    { 1, 1,	1 },    // S
+    { 2, 1,	2 },    // D
+    { 3, 1,	3 },    // F
+    { 5, 1,	4 },    // G
     
-    { 12, 2, 0 },
-    { 13, 2, 1 },
-    { 14, 2, 2 },
-    { 15, 2, 3 },
-    { 17, 2, 4 },
+    { 12, 2, 0 },   // Q
+    { 13, 2, 1 },   // W
+    { 14, 2, 2 },   // E
+    { 15, 2, 3 },   // R
+    { 17, 2, 4 },   // T
     
-    { 18, 3, 0 },
-    { 19, 3, 1 },
-    { 20, 3, 2 },
-    { 21, 3, 3 },
-    { 23, 3, 4 },
+    { 18, 3, 0 },   // 1
+    { 19, 3, 1 },   // 2
+    { 20, 3, 2 },   // 3
+    { 21, 3, 3 },   // 4
+    { 23, 3, 4 },   // 5
     
-    { 29, 4, 0 },
-    { 25, 4, 1 },
-    { 28, 4, 2 },
-    { 26, 4, 3 },
-    { 22, 4, 4 },
+    { 29, 4, 0 },   // 0
+    { 25, 4, 1 },   // 9
+    { 28, 4, 2 },   // 8
+    { 26, 4, 3 },   // 7
+    { 22, 4, 4 },   // 6
     
-    { 35, 5, 0 },
-    { 31, 5, 1 },
-    { 34, 5, 2 },
-    { 32, 5, 3 },
-    { 16, 5, 4 },
+    { 35, 5, 0 },   // P
+    { 31, 5, 1 },   // O
+    { 34, 5, 2 },   // I
+    { 32, 5, 3 },   // U
+    { 16, 5, 4 },   // Y
     
-    { 36, 6, 0 },
-    { 37, 6, 1 },
-    { 40, 6, 2 },
-    { 38, 6, 3 },
-    { 4,  6, 4 },
+    { 36, 6, 0 },   // ENTER
+    { 37, 6, 1 },   // L
+    { 40, 6, 2 },   // K
+    { 38, 6, 3 },   // J
+    { 4,  6, 4 },   // H
     
-    { 49, 7, 0 },
-    { 46, 7, 2 },
-    { 45, 7, 3 },
-    { 11, 7, 4 }
+    { 49, 7, 0 },   // Space
+    { 46, 7, 2 },   // M
+    { 45, 7, 3 },   // N
+    { 11, 7, 4 }    // B
 };
 
 #pragma mark - Implementation
@@ -233,6 +244,10 @@ KeyboardEntry keyboardLookup[] = {
         emuDisplayBitsPerPx = 32;
         emuDisplayBitsPerComponent = 8;
         emuDisplayBytesPerPx = 4;
+        emuLeftBorderPx = 32;
+        emuRightBorderPx = 64;
+        emuTopBorderPx = 56;
+        emuBottomBorderPx = 56;
         
         emuDisplayPxWidth = pxLeftBorder + pxHorizontalDisplay + pxRightBorder;
         emuDisplayPxHeight = pxTopBorder + pxVerticalDisplay + pxBottomBorder;
@@ -240,7 +255,7 @@ KeyboardEntry keyboardLookup[] = {
         emuDisplayBufferLength = (emuDisplayPxWidth * emuDisplayPxHeight) * emuDisplayBytesPerPx;
         emuDisplayBuffer = (unsigned char *)malloc(emuDisplayBufferLength);
         
-        pixelBeamX = 32;
+        pixelBeamX = 0;
         pixelBeamY = 0;
         
         _audioCore = [[AudioCore alloc] initWithSampleRate:44100 framesPerSecond:50];
@@ -256,7 +271,6 @@ KeyboardEntry keyboardLookup[] = {
         _emulationQueue = dispatch_queue_create("emulationQueue", nil);
         _emulationTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, _emulationQueue);
         dispatch_source_set_timer(_emulationTimer, DISPATCH_TIME_NOW, 1.0/fps * NSEC_PER_SEC, 0);
-        
         dispatch_source_set_event_handler(_emulationTimer, ^{
             
             switch (event) {
@@ -303,7 +317,7 @@ KeyboardEntry keyboardLookup[] = {
     core->Reset();
     frameCounter = 0;
     beeperOn = false;
-    pixelBeamX = 32;
+    pixelBeamX = 0;
     pixelBeamY = 0;
     [self resetKeyboardMap];
 }
@@ -324,7 +338,7 @@ KeyboardEntry keyboardLookup[] = {
     [self updateSreenWithTStates:tsCPU];
     [self updateAudioWithTStates:tsCPU];
     
-    if (core->GetTStates() >= tsPerFrame) {
+    if (core->GetTStates() > tsPerFrame) {
         
         core->ResetTStates(tsPerFrame);
         core->SignalInterrupt();
@@ -343,6 +357,10 @@ KeyboardEntry keyboardLookup[] = {
 
 - (void)updateSreenWithTStates:(int)tstates {
     
+    
+    
+    
+    
     for (int i = 0; i < (tstates << 1); i++) {
         
         int x = pixelBeamX + pxLeftBorder;
@@ -357,8 +375,9 @@ KeyboardEntry keyboardLookup[] = {
         
         if (y >= 0 && y < emuDisplayPxHeight && x < emuDisplayPxWidth) {
             
-            if (y < pxTopBorder || y >= pxTopBorder + pxVerticalDisplay) {
+            if (y < emuTopBorderPx || y >= emuTopBorderPx + pxVerticalDisplay) {
 
+                // Draw the top/bottom border
                 emuDisplayBuffer[displayBufferIndex] = pallette[borderColour].r;
                 emuDisplayBuffer[displayBufferIndex + 1] = pallette[borderColour].g;
                 emuDisplayBuffer[displayBufferIndex + 2] = pallette[borderColour].b;
@@ -368,32 +387,38 @@ KeyboardEntry keyboardLookup[] = {
                 
                 if (x < pxLeftBorder || x >= (pxLeftBorder + pxHorizontalDisplay)) {
 
+                    // Draw the left/right border
                     emuDisplayBuffer[displayBufferIndex] = pallette[borderColour].r;
                     emuDisplayBuffer[displayBufferIndex + 1] = pallette[borderColour].g;
                     emuDisplayBuffer[displayBufferIndex + 2] = pallette[borderColour].b;
                     emuDisplayBuffer[displayBufferIndex + 3] = pallette[borderColour].a;
                     
-                } else {
+                } else { // Draw the main bitmap screen
                     
-
+                    // Setup some temp variables for use when finding the memory address of the pixel and attribute
                     int px = x - pxLeftBorder;
                     int py = y - pxTopBorder;
                     
+                    // Calculate the memory address for the current pixel of the image
                     int pxAddr = 16384 + (px >> 3) + ((py & 0x07) << 8) + ((py & 0x38) << 2) + ((py & 0xc0) << 5);
                     int attrAddr = 16384 + (32 * 192) + (px >> 3) + ((py >> 3) << 5);
                     
+                    // Pull the pixel and attribute data from memory
                     int pxByte = memory[ pxAddr ];
                     int attrByte = memory[ attrAddr ];
                     
+                    // Extract the ink and paper colours from the attribute byte read in
                     int ink = (attrByte & 0x07) + ((attrByte & 0x40) >> 3);
                     int paper = ((attrByte >> 3) & 0x07) + ((attrByte & 0x40) >> 3);
                     
+                    // Switch ink and paper if the flash phase has changed
                     if ((frameCounter & 16) && (attrByte & 0x80)) {
                         paper = paper ^ ink;
                         ink = paper ^ ink;
                         paper = paper ^ ink;
                     }
                     
+                    // Draw the pixel using either the pixel or paper colour depending on if the pixel is set or not
                     if (pxByte & (0x80 >> (px & 7))) {
                         emuDisplayBuffer[displayBufferIndex] = pallette[ink].r;
                         emuDisplayBuffer[displayBufferIndex + 1] = pallette[ink].g;
@@ -412,6 +437,7 @@ KeyboardEntry keyboardLookup[] = {
         
         pixelBeamX += 1;
         
+        // The beam uses the full screen size regardless of the emulated screen size to maintain timing.
         if (pixelBeamX >= pxHorizontalTotal) {
             pixelBeamX -= pxHorizontalTotal;
             pixelBeamY += 1;

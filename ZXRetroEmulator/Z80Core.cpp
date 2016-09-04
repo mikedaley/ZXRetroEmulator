@@ -146,50 +146,55 @@ int CZ80Core::Execute(int num_tstates)
 	do
 	{
 		// First process an interrupt
-		if (m_CPURegisters.IntReq && m_CPURegisters.EIHandled == false && m_CPURegisters.IFF1 != 0 )
-		{
-			// First see if we are halted?
-			if ( m_CPURegisters.Halted )
-			{
-				m_CPURegisters.Halted = false;
-				m_CPURegisters.regPC++;
-			}
-
-			// Process the int required
-			m_CPURegisters.IFF1 = 0;
-			m_CPURegisters.IFF2 = 0;
-			m_CPURegisters.IntReq = false;
-			m_CPURegisters.regR = (m_CPURegisters.regR & 0x80) | ((m_CPURegisters.regR + 1) & 0x7f);
-
-			switch (m_CPURegisters.IM)
-			{
-			case 0:
-			case 1:
-			default:
-				Z80CoreMemWrite(--m_CPURegisters.regSP, (m_CPURegisters.regPC >> 8) & 0xff);
-				Z80CoreMemWrite(--m_CPURegisters.regSP, (m_CPURegisters.regPC >> 0) & 0xff);
-
-				m_CPURegisters.regPC = 0x0038;
-				m_MEMPTR = m_CPURegisters.regPC;
-				m_CPURegisters.TStates += 7;
-				break;
-
-			case 2:				
-				Z80CoreMemWrite(--m_CPURegisters.regSP, (m_CPURegisters.regPC >> 8) & 0xff);
-				Z80CoreMemWrite(--m_CPURegisters.regSP, (m_CPURegisters.regPC >> 0) & 0xff);
-
-				// Should handle the bus
-				unsigned short address = (m_CPURegisters.regI << 8) | 0;
-				m_CPURegisters.regPC = Z80CoreMemRead(address + 0);
-				m_CPURegisters.regPC |= Z80CoreMemRead(address + 1) << 8;
-
-				m_MEMPTR = m_CPURegisters.regPC;
-				m_CPURegisters.TStates += 7;
-				break;
-			}
-		}
-
-		// Clear the EIHandle flag
+        if (m_CPURegisters.IntReq)
+        {
+            if (m_CPURegisters.EIHandled == false && m_CPURegisters.IFF1 != 0 )
+            {
+                // First see if we are halted?
+                if ( m_CPURegisters.Halted )
+                {
+                    m_CPURegisters.Halted = false;
+                    m_CPURegisters.regPC++;
+                }
+                
+                // Process the int required
+                m_CPURegisters.IFF1 = 0;
+                m_CPURegisters.IFF2 = 0;
+                m_CPURegisters.IntReq = false;
+                m_CPURegisters.regR = (m_CPURegisters.regR & 0x80) | ((m_CPURegisters.regR + 1) & 0x7f);
+                
+                switch (m_CPURegisters.IM)
+                {
+                    case 0:
+                    case 1:
+                    default:
+                        Z80CoreMemWrite(--m_CPURegisters.regSP, (m_CPURegisters.regPC >> 8) & 0xff);
+                        Z80CoreMemWrite(--m_CPURegisters.regSP, (m_CPURegisters.regPC >> 0) & 0xff);
+                        
+                        m_CPURegisters.regPC = 0x0038;
+                        m_MEMPTR = m_CPURegisters.regPC;
+                        m_CPURegisters.TStates += 7;
+                        break;
+                        
+                    case 2:
+                        Z80CoreMemWrite(--m_CPURegisters.regSP, (m_CPURegisters.regPC >> 8) & 0xff);
+                        Z80CoreMemWrite(--m_CPURegisters.regSP, (m_CPURegisters.regPC >> 0) & 0xff);
+                        
+                        // Should handle the bus
+                        unsigned short address = (m_CPURegisters.regI << 8) | 0;
+                        m_CPURegisters.regPC = Z80CoreMemRead(address + 0);
+                        m_CPURegisters.regPC |= Z80CoreMemRead(address + 1) << 8;
+                        
+                        m_MEMPTR = m_CPURegisters.regPC;
+                        m_CPURegisters.TStates += 7;
+                        break;
+                }
+            }
+        } else if (m_CPURegisters.TStates > 32) {
+            m_CPURegisters.IntReq = false;
+        }
+        
+        // Clear the EIHandle flag
 		m_CPURegisters.EIHandled = false;
 
 		Z80OpcodeTable *table = &Main_Opcodes;
