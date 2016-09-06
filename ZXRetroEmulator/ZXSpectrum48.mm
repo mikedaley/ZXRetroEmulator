@@ -74,6 +74,7 @@ int tsRightBorder;
 int tsVerticalBlank;
 int tsVerticalDisplay;
 int tsHorizontalDisplay;
+int tsPerChar;
 
 // Machine specific pixel values
 int pxTopBorder;
@@ -111,6 +112,14 @@ int emuTopBorderLines;
 int emuBottomBorderLines;
 int emuBeamXMax;
 int emuBeamYMax;
+int canvasWidth;
+int canvasHeight;
+int emuNextEventTime;
+int emuDisplayBufferIndex;
+int emuCurrentLineStartTime;
+
+int pixelAddress;
+int attrAddress;
 
 // Audio
 int audioStepTStates;
@@ -234,6 +243,7 @@ KeyboardEntry keyboardLookup[] = {
         tsVerticalBlank = pxVerticalBlank * tsPerLine;
         tsVerticalDisplay = pxVerticalDisplay * tsPerLine;
         tsHorizontalDisplay = 128;
+        tsPerChar = 4;
         
         borderColour = 1;
         frameCounter = 0;
@@ -244,10 +254,27 @@ KeyboardEntry keyboardLookup[] = {
         emuDisplayBitsPerPx = 32;
         emuDisplayBitsPerComponent = 8;
         emuDisplayBytesPerPx = 4;
+        
         emuLeftBorderPx = 32;
         emuRightBorderPx = 64;
         emuTopBorderPx = 56;
         emuBottomBorderPx = 56;
+        
+        emuLeftBorderChars = 4;
+        emuRightBorderChars = 8;
+        emuBottomBorderLines = 56;
+        emuTopBorderLines = 56;
+        
+        emuBeamXMax = (32 + emuRightBorderChars);
+        emuBeamYMax = (192 + emuBottomBorderLines);
+        canvasWidth = 256 + 8 * (emuLeftBorderChars + emuRightBorderChars);
+        canvasHeight = 192 + emuTopBorderLines + emuBottomBorderLines;
+        emuDisplayBufferIndex = 0;
+        pixelAddress = 0x4000;
+        attrAddress = 0x1800;
+        emuNextEventTime = 14336 - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar);
+        emuCurrentLineStartTime = emuNextEventTime;
+        emuDisplayBufferIndex = 0;
         
         emuDisplayPxWidth = pxLeftBorder + pxHorizontalDisplay + pxRightBorder;
         emuDisplayPxHeight = pxTopBorder + pxVerticalDisplay + pxBottomBorder;
@@ -255,8 +282,8 @@ KeyboardEntry keyboardLookup[] = {
         emuDisplayBufferLength = (emuDisplayPxWidth * emuDisplayPxHeight) * emuDisplayBytesPerPx;
         emuDisplayBuffer = (unsigned char *)malloc(emuDisplayBufferLength);
         
-        pixelBeamX = 0;
-        pixelBeamY = 0;
+        pixelBeamX = -emuLeftBorderChars;
+        pixelBeamY = -emuTopBorderLines;
         
         _audioCore = [[AudioCore alloc] initWithSampleRate:44100 framesPerSecond:50];
         
@@ -345,8 +372,13 @@ KeyboardEntry keyboardLookup[] = {
         
         // Looks like we need to add 32px to the start position in the screen image. This kinda makes sense
         // as tState 0 of a frame is actually 32 pixels into the screen at the start of the vblank.
-        pixelBeamX = 32;
-        
+        pixelBeamX = -emuLeftBorderChars;
+        pixelBeamY = -emuTopBorderLines;
+        pixelAddress = 0x4000;
+        attrAddress = 0x1800;
+        emuNextEventTime = 14336 - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar);
+        emuCurrentLineStartTime = emuNextEventTime;
+        emuDisplayBufferIndex = 0;
         frameCounter++;
     }
     
@@ -358,96 +390,72 @@ KeyboardEntry keyboardLookup[] = {
 - (void)updateSreenWithTStates:(int)tstates {
     
     
-    
-    
-    
-    for (int i = 0; i < (tstates << 1); i++) {
+    while (emuNextEventTime <= core->GetTStates() && emuNextEventTime != -1) {
         
-        int x = pixelBeamX + pxLeftBorder;
-        int y = pixelBeamY - pxVerticalBlank;
-        
-        if (x >= pxHorizontalTotal) {
-            x -= pxHorizontalTotal;
-            y += 1;
-        }
-        
-        int displayBufferIndex = ((y * emuDisplayPxWidth) + x) * emuDisplayBytesPerPx;
-        
-        if (y >= 0 && y < emuDisplayPxHeight && x < emuDisplayPxWidth) {
+        if (pixelBeamY < 0 || pixelBeamY >= 192 || pixelBeamX < 0 || pixelBeamX >= 32) {
             
-            if (y < emuTopBorderPx || y >= emuTopBorderPx + pxVerticalDisplay) {
+            for (int i = 0; i < 8; i ++) {
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].r;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].g;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].b;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].a;
+            }
+            
+        } else {
+            
+            int pixelByte = memory[pixelAddress | pixelBeamX];
+            int attributeByte = memory[attrAddress | pixelBeamX];
+            
+            // Extract the ink and paper colours from the attribute byte read in
+            int ink = (attributeByte & 0x07) + ((attributeByte & 0x40) >> 3);
+            int paper = ((attributeByte >> 3) & 0x07) + ((attributeByte & 0x40) >> 3);
+            
+            // Switch ink and paper if the flash phase has changed
+            if ((frameCounter & 16) && (attributeByte & 0x80)) {
+                int tempPaper = paper;
+                paper = ink;
+                ink = tempPaper;
+            }
 
-                // Draw the top/bottom border
-                emuDisplayBuffer[displayBufferIndex] = pallette[borderColour].r;
-                emuDisplayBuffer[displayBufferIndex + 1] = pallette[borderColour].g;
-                emuDisplayBuffer[displayBufferIndex + 2] = pallette[borderColour].b;
-                emuDisplayBuffer[displayBufferIndex + 3] = pallette[borderColour].a;
+            for (int b = 0x80; b; b >>= 1) {
                 
-            } else {
-                
-                if (x < pxLeftBorder || x >= (pxLeftBorder + pxHorizontalDisplay)) {
-
-                    // Draw the left/right border
-                    emuDisplayBuffer[displayBufferIndex] = pallette[borderColour].r;
-                    emuDisplayBuffer[displayBufferIndex + 1] = pallette[borderColour].g;
-                    emuDisplayBuffer[displayBufferIndex + 2] = pallette[borderColour].b;
-                    emuDisplayBuffer[displayBufferIndex + 3] = pallette[borderColour].a;
-                    
-                } else { // Draw the main bitmap screen
-                    
-                    // Setup some temp variables for use when finding the memory address of the pixel and attribute
-                    int px = x - pxLeftBorder;
-                    int py = y - pxTopBorder;
-                    
-                    // Calculate the memory address for the current pixel of the image
-                    int pxAddr = 16384 + (px >> 3) + ((py & 0x07) << 8) + ((py & 0x38) << 2) + ((py & 0xc0) << 5);
-                    int attrAddr = 16384 + (32 * 192) + (px >> 3) + ((py >> 3) << 5);
-                    
-                    // Pull the pixel and attribute data from memory
-                    int pxByte = memory[ pxAddr ];
-                    int attrByte = memory[ attrAddr ];
-                    
-                    // Extract the ink and paper colours from the attribute byte read in
-                    int ink = (attrByte & 0x07) + ((attrByte & 0x40) >> 3);
-                    int paper = ((attrByte >> 3) & 0x07) + ((attrByte & 0x40) >> 3);
-                    
-                    // Switch ink and paper if the flash phase has changed
-                    if ((frameCounter & 16) && (attrByte & 0x80)) {
-                        paper = paper ^ ink;
-                        ink = paper ^ ink;
-                        paper = paper ^ ink;
-                    }
-                    
-                    // Draw the pixel using either the pixel or paper colour depending on if the pixel is set or not
-                    if (pxByte & (0x80 >> (px & 7))) {
-                        emuDisplayBuffer[displayBufferIndex] = pallette[ink].r;
-                        emuDisplayBuffer[displayBufferIndex + 1] = pallette[ink].g;
-                        emuDisplayBuffer[displayBufferIndex + 2] = pallette[ink].b;
-                        emuDisplayBuffer[displayBufferIndex + 3] = pallette[ink].a;
-                    } else {
-                        emuDisplayBuffer[displayBufferIndex] = pallette[paper].r;
-                        emuDisplayBuffer[displayBufferIndex + 1] = pallette[paper].g;
-                        emuDisplayBuffer[displayBufferIndex + 2] = pallette[paper].b;
-                        emuDisplayBuffer[displayBufferIndex + 3] = pallette[paper].a;
-                    }
-                    
+                if (pixelByte & b) {
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[ink].r;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[ink].g;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[ink].b;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[ink].a;
+                } else {
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[paper].r;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[paper].g;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[paper].b;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[paper].a;
                 }
             }
         }
         
-        pixelBeamX += 1;
+        pixelBeamX ++;
         
-        // The beam uses the full screen size regardless of the emulated screen size to maintain timing.
-        if (pixelBeamX >= pxHorizontalTotal) {
-            pixelBeamX -= pxHorizontalTotal;
-            pixelBeamY += 1;
+        if (pixelBeamX < emuBeamXMax) {
+            emuNextEventTime += tsPerChar;
+        } else {
+            pixelBeamX = -emuLeftBorderChars;
+            pixelBeamY++;
             
-            if (pixelBeamY >= pxVerticalTotal) {
-                pixelBeamY -= pxVerticalTotal;
+            if (pixelBeamY >= 0 && pixelBeamY < 192) {
+                pixelAddress = 16384 | ( (pixelBeamY & 0xc0) << 5 ) | ( (pixelBeamY & 0x07) << 8 ) | ( (pixelBeamY & 0x38) << 2 );
+                attrAddress = 16384 | 0x1800 | ( (pixelBeamY & 0xf8) << 2 );
+            }
+            
+            if (pixelBeamY < emuBeamYMax) {
+                emuCurrentLineStartTime += tsPerLine;
+                emuNextEventTime = emuCurrentLineStartTime;
+            } else {
+                emuNextEventTime = -1;
             }
         }
+        
+        
     }
-    
 }
 
 - (void)generateImage {
