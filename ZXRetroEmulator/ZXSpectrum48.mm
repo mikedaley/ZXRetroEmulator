@@ -61,71 +61,82 @@ unsigned char memory[64 * 1024];
 
 // Memory and IO contention tables
 static unsigned char contentionValues[8] = {6, 5, 4, 3, 2, 1, 0, 0};
-unsigned char memoryContentionTable[69888];
-unsigned char ioContentionTable[69888];
+unsigned char   memoryContentionTable[69888];
+unsigned char   ioContentionTable[69888];
 
 // Machine specific tState values
-int tsPerFrame;
-int tsPerLine;
-int tsTopBorder;
-int tsBottomBorder;
-int tsLeftBorder;
-int tsRightBorder;
-int tsVerticalBlank;
-int tsVerticalDisplay;
-int tsHorizontalDisplay;
-int tsPerChar;
+int             tsPerFrame;
+int             tsPerLine;
+int             tsTopBorder;
+int             tsVerticalBlank;
+int             tsVerticalDisplay;
+int             tsHorizontalDisplay;
+int             tsPerChar;
 
 // Machine specific pixel values
-int pxTopBorder;
-int pxBottomBorder;
-int pxLeftBorder;
-int pxRightBorder;
-int pxVerticalBlank;
-int pxHorizontalDisplay;
-int pxVerticalDisplay;
-int pxHorizontalTotal;
-int pxVerticalTotal;
+int             pxTopBorder;
+int             pxBottomBorder;
+int             pxLeftBorder;
+int             pxRightBorder;
+int             pxVerticalBlank;
+int             pxHorizontalDisplay;
+int             pxVerticalDisplay;
+int             pxHorizontalTotal;
+int             pxVerticalTotal;
 
 // Display values
-int borderColour;
-int frameCounter;
-int emuDisplayBitsPerPx;
-int emuDisplayBitsPerComponent;
-int emuDisplayBytesPerPx;
-unsigned int emuDisplayBufferLength;
-int emuDisplayPxWidth;
-int emuDisplayPxHeight;
-int emuTopBorderPx;
-int emuBottomBorderPx;
-int emuLeftBorderPx;
-int emuRightBorderPx;
-unsigned char *emuDisplayBuffer;
-bool emuShouldInterpolate;
-int pixelBeamX;
-int pixelBeamY;
-int frameTs;
 
-int emuLeftBorderChars;
-int emuRightBorderChars;
-int emuTopBorderLines;
-int emuBottomBorderLines;
-int emuBeamXMax;
-int emuBeamYMax;
-int canvasWidth;
-int canvasHeight;
-int emuNextEventTime;
-int emuDisplayBufferIndex;
-int emuCurrentLineStartTime;
+// Holds the current border colour as set by the ULA
+int             borderColour;
 
-int pixelAddress;
-int attrAddress;
+// Used to track the flash phase
+int             frameCounter;
+
+// Details for the image that is created for the screen representation
+int             emuDisplayBitsPerPx;
+int             emuDisplayBitsPerComponent;
+int             emuDisplayBytesPerPx;
+bool            emuShouldInterpolate;
+
+// Image buffer array buffer, its length and current index into the buffer used when drawing
+unsigned char   *emuDisplayBuffer;
+unsigned int    emuDisplayBufferLength;
+int             emuDisplayBufferIndex;
+
+// Width and height of the image used to display the emulated screen
+int             emuDisplayPxWidth;
+int             emuDisplayPxHeight;
+
+// Width of the left and right border in chars. A char is 8 pixels wide
+int             emuLeftBorderChars;
+int             emuRightBorderChars;
+
+// Height of the top and bottom borders in pixel lines
+int             emuTopBorderLines;
+int             emuBottomBorderLines;
+
+// The maximum beam exten on the X and Y axis. These are used to track if the simulated CRT beam is outside the
+// normal screen boundaries for the machine
+int             emuBeamXMax;
+int             emuBeamYMax;
+
+// Tracks the number of tStates used for drawing the screen. This is compared with the number of tStates that have passed
+// in the current frame so that the right number of 8x1 screen chunks are drawn
+int             emuDrawTs;
+int             emuCurrentLineStartTs;
+
+int             pixelBeamX;
+int             pixelBeamY;
+
+// Holds the current pixel and attribute line addresses when rendering the screen
+int             pixelAddress;
+int             attrAddress;
 
 // Audio
-int audioStepTStates;
-float audioValue;
-int audioTStates;
-bool beeperOn;
+int             audioStepTStates;
+float           audioValue;
+int             audioTStates;
+bool            beeperOn;
 
 // Events
 
@@ -223,7 +234,12 @@ KeyboardEntry keyboardLookup[] = {
         core->Initialise(coreMemoryRead, coreMemoryWrite, coreIORead, coreIOWrite, coreMemoryContention, coreIOContention, 0);
         
         event = None;
+
+        borderColour = 1;
+        frameCounter = 0;
         
+        _colourSpace = CGColorSpaceCreateDeviceRGB();
+
         pxTopBorder = 56;
         pxBottomBorder = 56;
         pxLeftBorder = 32;
@@ -237,28 +253,16 @@ KeyboardEntry keyboardLookup[] = {
         tsPerFrame = 69888;
         tsPerLine = 224;
         tsTopBorder = pxTopBorder * tsPerLine;
-        tsBottomBorder = pxBottomBorder * tsPerLine;
-        tsLeftBorder = pxLeftBorder * tsPerLine;
-        tsRightBorder = pxRightBorder * tsPerLine;
         tsVerticalBlank = pxVerticalBlank * tsPerLine;
         tsVerticalDisplay = pxVerticalDisplay * tsPerLine;
         tsHorizontalDisplay = 128;
         tsPerChar = 4;
         
-        borderColour = 1;
-        frameCounter = 0;
-        
-        _colourSpace = CGColorSpaceCreateDeviceRGB();
         
         emuShouldInterpolate = YES;
         emuDisplayBitsPerPx = 32;
         emuDisplayBitsPerComponent = 8;
         emuDisplayBytesPerPx = 4;
-        
-        emuLeftBorderPx = 32;
-        emuRightBorderPx = 64;
-        emuTopBorderPx = 56;
-        emuBottomBorderPx = 56;
         
         emuLeftBorderChars = 4;
         emuRightBorderChars = 8;
@@ -267,17 +271,14 @@ KeyboardEntry keyboardLookup[] = {
         
         emuBeamXMax = (32 + emuRightBorderChars);
         emuBeamYMax = (192 + emuBottomBorderLines);
-        canvasWidth = 256 + 8 * (emuLeftBorderChars + emuRightBorderChars);
-        canvasHeight = 192 + emuTopBorderLines + emuBottomBorderLines;
+
+        emuDisplayPxWidth = 256 + 8 * (emuLeftBorderChars + emuRightBorderChars);
+        emuDisplayPxHeight = 192 + emuTopBorderLines + emuBottomBorderLines;
+
         emuDisplayBufferIndex = 0;
-        pixelAddress = 0x4000;
-        attrAddress = 0x1800;
-        emuNextEventTime = 14336 - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar);
-        emuCurrentLineStartTime = emuNextEventTime;
+        emuDrawTs = 14336 - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar);
+        emuCurrentLineStartTs = emuDrawTs;
         emuDisplayBufferIndex = 0;
-        
-        emuDisplayPxWidth = pxLeftBorder + pxHorizontalDisplay + pxRightBorder;
-        emuDisplayPxHeight = pxTopBorder + pxVerticalDisplay + pxBottomBorder;
         
         emuDisplayBufferLength = (emuDisplayPxWidth * emuDisplayPxHeight) * emuDisplayBytesPerPx;
         emuDisplayBuffer = (unsigned char *)malloc(emuDisplayBufferLength);
@@ -362,10 +363,10 @@ KeyboardEntry keyboardLookup[] = {
     
     int tsCPU = core->Execute(1);
     
-    [self updateSreenWithTStates:tsCPU];
+    [self updateSreenWithTStates];
     [self updateAudioWithTStates:tsCPU];
     
-    if (core->GetTStates() > tsPerFrame) {
+    if (core->GetTStates() >= tsPerFrame) {
         
         core->ResetTStates(tsPerFrame);
         core->SignalInterrupt();
@@ -374,10 +375,8 @@ KeyboardEntry keyboardLookup[] = {
         // as tState 0 of a frame is actually 32 pixels into the screen at the start of the vblank.
         pixelBeamX = -emuLeftBorderChars;
         pixelBeamY = -emuTopBorderLines;
-        pixelAddress = 0x4000;
-        attrAddress = 0x1800;
-        emuNextEventTime = 14336 - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar);
-        emuCurrentLineStartTime = emuNextEventTime;
+        emuDrawTs = 14336 - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar);
+        emuCurrentLineStartTs = emuDrawTs;
         emuDisplayBufferIndex = 0;
         frameCounter++;
     }
@@ -387,11 +386,12 @@ KeyboardEntry keyboardLookup[] = {
 
 #pragma mark - Display
 
-- (void)updateSreenWithTStates:(int)tstates {
+- (void)updateSreenWithTStates {
     
-    
-    while (emuNextEventTime <= core->GetTStates() && emuNextEventTime != -1) {
+    // Keep drawing 8x1 screen chucks based on the number of Ts in the current frame
+    while (emuDrawTs <= core->GetTStates() && emuDrawTs != -1) {
         
+        // Draw the borders
         if (pixelBeamY < 0 || pixelBeamY >= 192 || pixelBeamX < 0 || pixelBeamX >= 32) {
             
             for (int i = 0; i < 8; i ++) {
@@ -401,7 +401,7 @@ KeyboardEntry keyboardLookup[] = {
                 emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].a;
             }
             
-        } else {
+        } else { // Draw the main bitmap screen
             
             int pixelByte = memory[pixelAddress | pixelBeamX];
             int attributeByte = memory[attrAddress | pixelBeamX];
@@ -417,6 +417,7 @@ KeyboardEntry keyboardLookup[] = {
                 ink = tempPaper;
             }
 
+            // Loop through the current pixel byte drawing pixels into the screen image buffer
             for (int b = 0x80; b; b >>= 1) {
                 
                 if (pixelByte & b) {
@@ -433,28 +434,33 @@ KeyboardEntry keyboardLookup[] = {
             }
         }
         
+        // Step the pixel beam 1 char position right, which is in effect 8 pixels
         pixelBeamX ++;
         
         if (pixelBeamX < emuBeamXMax) {
-            emuNextEventTime += tsPerChar;
+            // Not reached the right edge of the screen so update the drawing Ts by 1 char
+            emuDrawTs += tsPerChar;
         } else {
+            
+            // Reached the right edge of the screen so reset the X beam and drop down one line
             pixelBeamX = -emuLeftBorderChars;
             pixelBeamY++;
             
+            // If the new line is within the bitmap screen update the pixel and attrubute line addresses
             if (pixelBeamY >= 0 && pixelBeamY < 192) {
                 pixelAddress = 16384 | ( (pixelBeamY & 0xc0) << 5 ) | ( (pixelBeamY & 0x07) << 8 ) | ( (pixelBeamY & 0x38) << 2 );
                 attrAddress = 16384 | 0x1800 | ( (pixelBeamY & 0xf8) << 2 );
             }
             
+            // If we are not past the bottom of the screen then update the drawing Ts with an entire line
             if (pixelBeamY < emuBeamYMax) {
-                emuCurrentLineStartTime += tsPerLine;
-                emuNextEventTime = emuCurrentLineStartTime;
+                emuCurrentLineStartTs += tsPerLine;
+                emuDrawTs = emuCurrentLineStartTs;
             } else {
-                emuNextEventTime = -1;
+                // Finished the screen
+                emuDrawTs = -1;
             }
         }
-        
-        
     }
 }
 
@@ -608,7 +614,7 @@ static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
             core->AddTStates(4);
         }
     }
-    
+
     if ((address & 0xff) == 0xfe) {
         borderColour = data & 0x07;
         beeperOn = (data & 0x10) ? true : false;
@@ -624,8 +630,33 @@ static void coreMemoryContention(unsigned short address, unsigned int tstates, i
 }
 
 static void coreIOContention(unsigned short address, unsigned int tstates, int param) {
-    
+
+
 }
+
+//static void portLate(unsigned short address) {
+//    if ((address & 1) == 0) {
+//        core->AddTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+//        core->AddTStates(2);
+//    } else {
+//        if (address >= 16384 && address <= 32767) {
+//            core->AddTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+//            core->AddTStates(1);
+//            core->AddTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+//            core->AddTStates(1);
+//            core->AddTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+//        } else {
+//            core->AddTStates(2);
+//        }
+//    }
+//}
+//
+//static void portEarly(unsigned short address) {
+//    if (address >= 16384 && address <= 32767) {
+//        core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
+//    }
+//    core->AddTStates(1);
+//}
 
 #pragma mark - Contention Tables
 
