@@ -10,6 +10,8 @@
 #import "ZXSpectrum48.h"
 #import "Z80Core.h"
 #import "AudioCore.h"
+#import <SpriteKit/SpriteKit.h>
+#import "MyScene.h"
 
 #pragma mark - Private Interface
 
@@ -323,7 +325,11 @@ KeyboardEntry keyboardLookup[] = {
             [self runFrame];
             [self generateImage];
             dispatch_async(dispatch_get_main_queue(), ^{
-                self.emulationView.layer.contents = self.imageRef;
+//                self.emulationView.layer.contents = self.imageRef;
+                SKTexture *texture = [SKTexture textureWithCGImage:(CGImageRef)self.imageRef];
+                texture.filteringMode = SKTextureFilteringNearest;
+                self.scene.sprite.texture = texture;
+                
             });
         });
         
@@ -363,7 +369,7 @@ KeyboardEntry keyboardLookup[] = {
     
     int tsCPU = core->Execute(1);
     
-    [self updateSreenWithTStates];
+    [self updateSreen];
     [self updateAudioWithTStates:tsCPU];
     
     if (core->GetTStates() >= tsPerFrame) {
@@ -386,7 +392,7 @@ KeyboardEntry keyboardLookup[] = {
 
 #pragma mark - Display
 
-- (void)updateSreenWithTStates {
+- (void)updateSreen {
     
     // Keep drawing 8x1 screen chucks based on the number of Ts in the current frame
     while (emuDrawTs <= core->GetTStates() && emuDrawTs != -1) {

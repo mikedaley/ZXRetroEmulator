@@ -12,12 +12,15 @@
 #import "EmulationViewController.h"
 #import "ZXSpectrum48.h"
 
+#import "SpriteKitViewController.h"
+
 #pragma mark = Private Interface
 
 @interface AppDelegate ()
 
 @property (weak) IBOutlet NSWindow *window;
 @property (weak) IBOutlet EmulationViewController *emulationViewController;
+@property (weak) IBOutlet SpriteKitViewController *spriteKitViewController;
 
 @property (strong) NSLayoutConstraint *windowWidthConstraint;
 @property (strong) NSLayoutConstraint *windowHeightConstraint;
@@ -36,7 +39,8 @@
     
     // Setup the machine to be emulated and set it as the delegate for the emaultion view controller. This means view based events such as keyDown,
     // keyUp and flagsChanged will be passed to _machine for processing
-    _machine = [[ZXSpectrum48 alloc] initWithEmulationScreenView:_emulationViewController.view];
+    _machine = [[ZXSpectrum48 alloc] initWithEmulationScreenView:_spriteKitViewController.view];
+    _machine.scene = _spriteKitViewController.scene;
     _emulationViewController.delegate = _machine;
     [_machine startExecution];
 }
@@ -49,14 +53,14 @@
 
 - (void)setupViews {
     _window.contentView.wantsLayer = YES;
-    [_window.contentView addSubview:_emulationViewController.view];
+    [_window.contentView addSubview:_spriteKitViewController.view];
 
-    _emulationViewController.view.translatesAutoresizingMaskIntoConstraints = NO;
+    _spriteKitViewController.view.translatesAutoresizingMaskIntoConstraints = NO;
     
-    NSDictionary *views = @{ @"emulationDisplayView" : _emulationViewController.view };
+    NSDictionary *views = @{ @"emulationDisplayView" : _spriteKitViewController.view };
     
-    _windowWidthConstraint = [NSLayoutConstraint constraintWithItem:_emulationViewController.view attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeWidth multiplier:1.0 constant:352.0];
-    _windowHeightConstraint = [NSLayoutConstraint constraintWithItem:_emulationViewController.view attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeHeight multiplier:1.0 constant:304.0];
+    _windowWidthConstraint = [NSLayoutConstraint constraintWithItem:_spriteKitViewController.view attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeWidth multiplier:1.0 constant:352.0];
+    _windowHeightConstraint = [NSLayoutConstraint constraintWithItem:_spriteKitViewController.view attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeHeight multiplier:1.0 constant:304.0];
     
     [_window.contentView addConstraint:_windowWidthConstraint];
     [_window.contentView addConstraint:_windowHeightConstraint];
@@ -67,7 +71,7 @@
     [_window.contentView addConstraints:vertEmulationConstraint];
     [_window.contentView addConstraints:horizEmulationConstraint];
     
-    [_window makeFirstResponder:_emulationViewController.view];
+    [_window makeFirstResponder:_spriteKitViewController.view];
 }
 
 #pragma mark - Menu actions

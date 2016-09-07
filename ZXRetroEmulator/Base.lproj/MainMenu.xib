@@ -15,6 +15,7 @@
         <customObject id="Voe-Tx-rLC" customClass="AppDelegate">
             <connections>
                 <outlet property="emulationViewController" destination="hLm-wU-4RZ" id="def-p6-61R"/>
+                <outlet property="spriteKitViewController" destination="NQh-WB-i1L" id="gGR-Cb-Yxe"/>
                 <outlet property="window" destination="QvC-M9-y7g" id="gIp-Ho-8D9"/>
             </connections>
         </customObject>
@@ -236,5 +237,6 @@
             <point key="canvasLocation" x="-382.5" y="135"/>
         </window>
         <viewController id="hLm-wU-4RZ" userLabel="Emulation View Controller" customClass="EmulationViewController"/>
+        <viewController id="NQh-WB-i1L" userLabel="Sprite Kit View Controller" customClass="SpriteKitViewController"/>
     </objects>
 </document>

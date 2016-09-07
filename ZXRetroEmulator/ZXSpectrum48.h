@@ -8,10 +8,15 @@
 
 #import <Cocoa/Cocoa.h>
 #import "ViewEventProtocol.h"
+#import <SpriteKit/SpriteKit.h>
+
+@class MyScene;
 
 @interface ZXSpectrum48 : NSObject <ViewEventProtocol>
 
 #pragma mark - Properties
+
+@property (strong) MyScene *scene;
 
 #pragma mark - Methods
 

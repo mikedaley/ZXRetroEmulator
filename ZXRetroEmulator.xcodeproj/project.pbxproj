@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		994F59501D8002CF00D74F41 /* SpriteKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 994F594F1D8002CF00D74F41 /* SpriteKit.framework */; };
+		994F59541D80031300D74F41 /* SpriteKitViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 994F59521D80031300D74F41 /* SpriteKitViewController.m */; };
+		994F59551D80031300D74F41 /* SpriteKitViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 994F59531D80031300D74F41 /* SpriteKitViewController.xib */; };
+		994F59581D80039700D74F41 /* MyScene.m in Sources */ = {isa = PBXBuildFile; fileRef = 994F59571D80039700D74F41 /* MyScene.m */; };
 		ED3650111D7AFA6D00A6383B /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = ED3650101D7AFA6D00A6383B /* AppDelegate.m */; };
 		ED3650141D7AFA6D00A6383B /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = ED3650131D7AFA6D00A6383B /* main.m */; };
 		ED3650161D7AFA6D00A6383B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ED3650151D7AFA6D00A6383B /* Assets.xcassets */; };
@@ -28,6 +32,12 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		994F594F1D8002CF00D74F41 /* SpriteKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpriteKit.framework; path = System/Library/Frameworks/SpriteKit.framework; sourceTree = SDKROOT; };
+		994F59511D80031300D74F41 /* SpriteKitViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SpriteKitViewController.h; sourceTree = "<group>"; };
+		994F59521D80031300D74F41 /* SpriteKitViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SpriteKitViewController.m; sourceTree = "<group>"; };
+		994F59531D80031300D74F41 /* SpriteKitViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = SpriteKitViewController.xib; sourceTree = "<group>"; };
+		994F59561D80039700D74F41 /* MyScene.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MyScene.h; sourceTree = "<group>"; };
+		994F59571D80039700D74F41 /* MyScene.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MyScene.m; sourceTree = "<group>"; };
 		ED36500C1D7AFA6D00A6383B /* ZXRetroEmulator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZXRetroEmulator.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED36500F1D7AFA6D00A6383B /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		ED3650101D7AFA6D00A6383B /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -69,6 +79,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				994F59501D8002CF00D74F41 /* SpriteKit.framework in Frameworks */,
 				ED3650491D7B116E00A6383B /* QuartzCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -81,6 +92,7 @@
 			children = (
 				ED36500E1D7AFA6D00A6383B /* ZXRetroEmulator */,
 				ED36500D1D7AFA6D00A6383B /* Products */,
+				994F594F1D8002CF00D74F41 /* SpriteKit.framework */,
 				ED3650481D7B116E00A6383B /* QuartzCore.framework */,
 			);
 			sourceTree = "<group>";
@@ -172,6 +184,11 @@
 				ED3650431D7AFB6B00A6383B /* EmulationViewController.h */,
 				ED3650441D7AFB6B00A6383B /* EmulationViewController.m */,
 				ED3650451D7AFB6B00A6383B /* EmulationViewController.xib */,
+				994F59511D80031300D74F41 /* SpriteKitViewController.h */,
+				994F59521D80031300D74F41 /* SpriteKitViewController.m */,
+				994F59531D80031300D74F41 /* SpriteKitViewController.xib */,
+				994F59561D80039700D74F41 /* MyScene.h */,
+				994F59571D80039700D74F41 /* MyScene.m */,
 			);
 			name = "View Controllers";
 			sourceTree = "<group>";
@@ -271,6 +288,7 @@
 			files = (
 				ED3650161D7AFA6D00A6383B /* Assets.xcassets in Resources */,
 				ED3650471D7AFB6B00A6383B /* EmulationViewController.xib in Resources */,
+				994F59551D80031300D74F41 /* SpriteKitViewController.xib in Resources */,
 				ED3650281D7AFADA00A6383B /* 48.ROM in Resources */,
 				ED3650191D7AFA6D00A6383B /* MainMenu.xib in Resources */,
 			);
@@ -289,10 +307,12 @@
 				ED3650391D7AFAE400A6383B /* Z80Core_MainOpcodes.cpp in Sources */,
 				ED36503A1D7AFAE400A6383B /* Z80Core_CBOpcodes.cpp in Sources */,
 				ED3650141D7AFA6D00A6383B /* main.m in Sources */,
+				994F59581D80039700D74F41 /* MyScene.m in Sources */,
 				ED36503E1D7AFAE400A6383B /* Z80Core_DDCB_FDCBOpcodes.cpp in Sources */,
 				ED3650381D7AFAE400A6383B /* Z80Core.cpp in Sources */,
 				ED36503B1D7AFAE400A6383B /* Z80Core_EDOpcodes.cpp in Sources */,
 				ED3650111D7AFA6D00A6383B /* AppDelegate.m in Sources */,
+				994F59541D80031300D74F41 /* SpriteKitViewController.m in Sources */,
 				ED3650461D7AFB6B00A6383B /* EmulationViewController.m in Sources */,
 				ED3650511D7B2C0700A6383B /* AudioCore.m in Sources */,
 				ED36503D1D7AFAE400A6383B /* Z80Core_FDOpcodes.cpp in Sources */,
