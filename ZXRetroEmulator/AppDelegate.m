@@ -22,6 +22,9 @@
 @property (strong) NSLayoutConstraint *windowWidthConstraint;
 @property (strong) NSLayoutConstraint *windowHeightConstraint;
 
+@property (assign) NSInteger viewWidth;
+@property (assign) NSInteger viewHeight;
+
 @property (strong) ZXSpectrum48 *machine;
 
 @end
@@ -31,6 +34,9 @@
 @implementation AppDelegate
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
+
+    _viewWidth = 32 + 256 + 56;
+    _viewHeight = 32 + 192 + 32;
     
     [self setupViews];
     
@@ -55,8 +61,8 @@
     
     NSDictionary *views = @{ @"emulationDisplayView" : _emulationViewController.view };
     
-    _windowWidthConstraint = [NSLayoutConstraint constraintWithItem:_emulationViewController.view attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeWidth multiplier:1.0 constant:352.0];
-    _windowHeightConstraint = [NSLayoutConstraint constraintWithItem:_emulationViewController.view attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeHeight multiplier:1.0 constant:304.0];
+    _windowWidthConstraint = [NSLayoutConstraint constraintWithItem:_emulationViewController.view attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeWidth multiplier:1.0 constant:_viewWidth];
+    _windowHeightConstraint = [NSLayoutConstraint constraintWithItem:_emulationViewController.view attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeHeight multiplier:1.0 constant:_viewHeight];
     
     [_window.contentView addConstraint:_windowWidthConstraint];
     [_window.contentView addConstraint:_windowHeightConstraint];
@@ -80,8 +86,8 @@
         context.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
         
         NSMenuItem *menuItem = sender;
-        self.windowWidthConstraint.animator.constant = 352 * menuItem.tag / 2.0;
-        self.windowHeightConstraint.animator.constant = 304 * menuItem.tag / 2.0;
+        self.windowWidthConstraint.animator.constant = _viewWidth * menuItem.tag / 2.0;
+        self.windowHeightConstraint.animator.constant = _viewHeight * menuItem.tag / 2.0;
         
     } completionHandler:nil];
     
