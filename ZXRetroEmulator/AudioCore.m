@@ -42,7 +42,8 @@
     self = [super init];
     if (self) {
         
-        _frameCapcity = (sampleRate / fps) / 2;
+        _frameCapcity = (sampleRate / fps);
+        _frameCapcity = 880;
         
         _audioEngine = [AVAudioEngine new];
         _playerNode = [AVAudioPlayerNode new];
@@ -50,18 +51,18 @@
         [_mixerNode setOutputVolume:0.5];
         
         // Playing with improving the sound output using filters :)
-        AVAudioUnitEQ *eqnode = [[AVAudioUnitEQ alloc] initWithNumberOfBands:2];
-        eqnode.globalGain = 1;
-        [_audioEngine attachNode:eqnode];
-        AVAudioUnitEQFilterParameters *params = eqnode.bands[0];
-        params.filterType = AVAudioUnitEQFilterTypeBandPass;
-        params.bandwidth = 0.5;
-        params.frequency = 1000.0;
-        params.gain = 15;
+//        AVAudioUnitEQ *eqnode = [[AVAudioUnitEQ alloc] initWithNumberOfBands:2];
+//        eqnode.globalGain = 1;
+//        [_audioEngine attachNode:eqnode];
+//        AVAudioUnitEQFilterParameters *params = eqnode.bands[0];
+//        params.filterType = AVAudioUnitEQFilterTypeLowPass;
+//        params.bandwidth = 1;
+//        params.frequency = 1021;
+//        params.gain = 15;
         
         AVAudioFormat *audioFormat = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32 sampleRate:sampleRate channels:1 interleaved:NO];
         
-        _totalBuffers = 32;
+        _totalBuffers = 64;
         
         _buffers = [NSMutableArray new];
         for (int i = 0; i < _totalBuffers; i++) {
@@ -72,7 +73,7 @@
         
         [_audioEngine attachNode:_playerNode];
         [_audioEngine connect:_playerNode to:_mixerNode format:audioFormat];
-        [_audioEngine connect:eqnode to:_mixerNode format:audioFormat];
+//        [_audioEngine connect:eqnode to:_mixerNode format:audioFormat];
         
         [_audioEngine startAndReturnError:nil];
         [_playerNode play];
@@ -89,7 +90,7 @@
     float * const data = buffer.floatChannelData[0];
     data[_currentBufferPosition++] = value * 0.001f;
     
-    if (self.currentBufferPosition >= self.frameCapcity) {
+    if (self.currentBufferPosition == self.frameCapcity) {
         [self.playerNode scheduleBuffer:buffer completionHandler:nil];
         self.currentBufferPosition = 0;
         self.currentBuffer = (self.currentBuffer + 1) % self.totalBuffers;

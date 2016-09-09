@@ -254,40 +254,39 @@ KeyboardEntry keyboardLookup[] = {
         tsPerChar = 4;
         tsToOrigin = 14336;
         
-        
         emuShouldInterpolate = YES;
         emuDisplayBitsPerPx = 32;
         emuDisplayBitsPerComponent = 8;
         emuDisplayBytesPerPx = 4;
         
-        emuLeftBorderChars = 4;
-        emuRightBorderChars = 7;
-        emuBottomBorderLines = 32;
-        emuTopBorderLines = 32;
+        emuLeftBorderChars = 5;
+        emuRightBorderChars = 5;
+        
+        emuBottomBorderLines = emuLeftBorderChars * 8;
+        emuTopBorderLines = emuLeftBorderChars * 8;
         
         emuBeamXMax = (32 + emuRightBorderChars);
         emuBeamYMax = (192 + emuBottomBorderLines);
 
         emuDisplayPxWidth = 256 + 8 * (emuLeftBorderChars + emuRightBorderChars);
         emuDisplayPxHeight = 192 + emuTopBorderLines + emuBottomBorderLines;
+        emuDisplayTsOffset = 4;
+
+        [self startDisplayFrame];
         
-        [self displayStartFrame];
-        
+        // Setup the display buffer and length used to store the output from the emulator
         emuDisplayBufferLength = (emuDisplayPxWidth * emuDisplayPxHeight) * emuDisplayBytesPerPx;
         emuDisplayBuffer = (unsigned char *)malloc(emuDisplayBufferLength);
         
-        pixelBeamX = -emuLeftBorderChars;
-        pixelBeamY = -emuTopBorderLines;
+        float fps = 50.08;
+
+        _audioCore = [[AudioCore alloc] initWithSampleRate:44100 framesPerSecond:fps];
         
-        _audioCore = [[AudioCore alloc] initWithSampleRate:44100 framesPerSecond:50];
-        
-        audioStepTStates = (tsPerFrame * 50) / 44100;
+        audioStepTStates = (tsPerFrame * fps) / 44100;
         
         [self buildContentionTable];
         [self resetKeyboardMap];
-        [self loadROM];
-        
-        float fps = 50.0;
+        [self loadDefaultROM];
         
         _emulationQueue = dispatch_queue_create("emulationQueue", nil);
         _emulationTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, _emulationQueue);
@@ -313,11 +312,13 @@ KeyboardEntry keyboardLookup[] = {
                     break;
             }
             
-            [self runFrame];
+            [self doFrame];
             [self generateImage];
+
             dispatch_async(dispatch_get_main_queue(), ^{
                 self.emulationView.layer.contents = self.imageRef;
             });
+        
         });
         
     }
@@ -338,11 +339,11 @@ KeyboardEntry keyboardLookup[] = {
     core->Reset();
     frameCounter = 0;
     beeperOn = false;
-    [self displayStartFrame];
+    [self startDisplayFrame];
     [self resetKeyboardMap];
 }
 
-- (void)runFrame {
+- (void)doFrame {
     
     int count = tsPerFrame;
     while (count > 0) {
@@ -363,7 +364,7 @@ KeyboardEntry keyboardLookup[] = {
         core->SignalInterrupt();
         
         // Reset the drawing vars.
-        [self displayStartFrame];
+        [self startDisplayFrame];
         
         frameCounter++;
     }
@@ -474,10 +475,9 @@ KeyboardEntry keyboardLookup[] = {
     CFRelease(dataRef);
 }
 
-- (void)displayStartFrame {
+- (void)startDisplayFrame {
     pixelBeamX = -emuLeftBorderChars;
     pixelBeamY = -emuTopBorderLines;
-    emuDisplayTsOffset = 8;
     emuDisplayTs = tsToOrigin - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar) - emuDisplayTsOffset;
     emuCurrentLineStartTs = emuDisplayTs;
     emuDisplayBufferIndex = 0;
@@ -491,7 +491,7 @@ KeyboardEntry keyboardLookup[] = {
         
         int tStates = audioStepTStates - audioTStates;
         
-        audioValue += beeperOn ? (2048 * tStates) : 0;
+        audioValue += beeperOn ? (8192 * tStates) : 0;
         
         [self.audioCore updateBeeperAudioWithValue:audioValue / audioStepTStates];
         
@@ -501,7 +501,7 @@ KeyboardEntry keyboardLookup[] = {
         
     }
     
-    audioValue += beeperOn ? (2048 * numberTs) : 0;
+    audioValue += beeperOn ? (8192 * numberTs) : 0;
     audioTStates += numberTs;
 }
 
@@ -517,6 +517,7 @@ static void coreMemoryWrite(unsigned short address, unsigned char data, int tsta
     if (address >= 16384) {
         memory[address] = data;
     }
+    
 }
 
 static unsigned char coreIORead(unsigned short address, int tstates) {
@@ -640,7 +641,7 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
         
         // 14336 Ts is reported by most ZX Spectrum machines while there were a percentage that would
         // respond to the /INT late report 14335 Ts. We are setting up contention for 14336 Ts
-        int ts = i - (tsTopBorder + tsVerticalBlank);
+        int ts = i - ((tsTopBorder + tsVerticalBlank) - 1);
 
         if (ts >= 0 && ts < (int)tsVerticalDisplay) {
             int perLine = ts % tsPerLine;
@@ -654,7 +655,7 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
 
 #pragma mark - Load ROM
 
-- (void)loadROM {
+- (void)loadDefaultROM {
     
     NSString *path = [[NSBundle mainBundle] pathForResource:@"48" ofType:@"ROM"];
     NSData *rom = [NSData dataWithContentsOfFile:path];
@@ -718,7 +719,7 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
         core->SetRegister(CZ80Core::eREG_PC, (pc_msb << 8) | pc_lsb);
         core->SetRegister(CZ80Core::eREG_SP, core->GetRegister(CZ80Core::eREG_SP) + 2);
         
-        [self displayStartFrame];
+        [self startDisplayFrame];
     }
 }
 
