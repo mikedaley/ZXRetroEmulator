@@ -42,8 +42,7 @@
     self = [super init];
     if (self) {
         
-//        _frameCapcity = (sampleRate / fps);
-        _frameCapcity = 350;
+        _frameCapcity = (sampleRate / fps) / 2;
         
         _audioEngine = [AVAudioEngine new];
         _playerNode = [AVAudioPlayerNode new];
@@ -62,7 +61,7 @@
         
         AVAudioFormat *audioFormat = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32 sampleRate:sampleRate channels:1 interleaved:NO];
         
-        _totalBuffers = 16;
+        _totalBuffers = 32;
         
         _buffers = [NSMutableArray new];
         for (int i = 0; i < _totalBuffers; i++) {
@@ -90,7 +89,7 @@
     float * const data = buffer.floatChannelData[0];
     data[_currentBufferPosition++] = value * 0.001f;
     
-    if (self.currentBufferPosition > self.frameCapcity) {
+    if (self.currentBufferPosition >= self.frameCapcity) {
         [self.playerNode scheduleBuffer:buffer completionHandler:nil];
         self.currentBufferPosition = 0;
         self.currentBuffer = (self.currentBuffer + 1) % self.totalBuffers;
