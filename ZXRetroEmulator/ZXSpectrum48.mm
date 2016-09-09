@@ -43,20 +43,13 @@ struct KeyboardEntry {
     int mapBit;
 };
 
-#pragma mark - Enums
-
-typedef enum : NSUInteger {
-    None,
-    Reset,
-    Snapshot,
-} EventType;
-
 #pragma mark - Variables
 
 // Z80 CPU core
 CZ80Core *core;
 
-// Main Memory
+// Main Memory array
+// TODO: Break memory up into 16k banks. This will be needed for 128k machines
 unsigned char memory[64 * 1024];
 
 // Memory and IO contention tables
@@ -72,12 +65,10 @@ int             tsVerticalBlank;
 int             tsVerticalDisplay;
 int             tsHorizontalDisplay;
 int             tsPerChar;
+int             tsToOrigin;
 
 // Machine specific pixel values
 int             pxTopBorder;
-int             pxBottomBorder;
-int             pxLeftBorder;
-int             pxRightBorder;
 int             pxVerticalBlank;
 int             pxHorizontalDisplay;
 int             pxVerticalDisplay;
@@ -122,8 +113,9 @@ int             emuBeamYMax;
 
 // Tracks the number of tStates used for drawing the screen. This is compared with the number of tStates that have passed
 // in the current frame so that the right number of 8x1 screen chunks are drawn
-int             emuDrawTs;
+int             emuDisplayTs;
 int             emuCurrentLineStartTs;
+int             emuDisplayTsOffset;
 
 int             pixelBeamX;
 int             pixelBeamY;
@@ -139,6 +131,12 @@ int             audioTStates;
 bool            beeperOn;
 
 // Events
+
+typedef enum : NSUInteger {
+    None,
+    Reset,
+    Snapshot,
+} EventType;
 
 EventType event;
 
@@ -241,9 +239,6 @@ KeyboardEntry keyboardLookup[] = {
         _colourSpace = CGColorSpaceCreateDeviceRGB();
 
         pxTopBorder = 56;
-        pxBottomBorder = 56;
-        pxLeftBorder = 32;
-        pxRightBorder = 64;
         pxVerticalBlank = 8;
         pxHorizontalDisplay = 256;
         pxVerticalDisplay = 192;
@@ -257,6 +252,7 @@ KeyboardEntry keyboardLookup[] = {
         tsVerticalDisplay = pxVerticalDisplay * tsPerLine;
         tsHorizontalDisplay = 128;
         tsPerChar = 4;
+        tsToOrigin = 14336;
         
         
         emuShouldInterpolate = YES;
@@ -265,20 +261,17 @@ KeyboardEntry keyboardLookup[] = {
         emuDisplayBytesPerPx = 4;
         
         emuLeftBorderChars = 4;
-        emuRightBorderChars = 8;
-        emuBottomBorderLines = 56;
-        emuTopBorderLines = 56;
+        emuRightBorderChars = 7;
+        emuBottomBorderLines = 32;
+        emuTopBorderLines = 32;
         
         emuBeamXMax = (32 + emuRightBorderChars);
         emuBeamYMax = (192 + emuBottomBorderLines);
 
         emuDisplayPxWidth = 256 + 8 * (emuLeftBorderChars + emuRightBorderChars);
         emuDisplayPxHeight = 192 + emuTopBorderLines + emuBottomBorderLines;
-
-        emuDisplayBufferIndex = 0;
-        emuDrawTs = 14336 - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar);
-        emuCurrentLineStartTs = emuDrawTs;
-        emuDisplayBufferIndex = 0;
+        
+        [self displayStartFrame];
         
         emuDisplayBufferLength = (emuDisplayPxWidth * emuDisplayPxHeight) * emuDisplayBytesPerPx;
         emuDisplayBuffer = (unsigned char *)malloc(emuDisplayBufferLength);
@@ -345,8 +338,7 @@ KeyboardEntry keyboardLookup[] = {
     core->Reset();
     frameCounter = 0;
     beeperOn = false;
-    pixelBeamX = 0;
-    pixelBeamY = 0;
+    [self displayStartFrame];
     [self resetKeyboardMap];
 }
 
@@ -356,7 +348,6 @@ KeyboardEntry keyboardLookup[] = {
     while (count > 0) {
         count -= [self step];
     }
-    
 }
 
 - (int)step {
@@ -366,18 +357,14 @@ KeyboardEntry keyboardLookup[] = {
     [self updateSreenWithTStates];
     [self updateAudioWithTStates:tsCPU];
     
-    if (core->GetTStates() >= tsPerFrame) {
+    if (core->GetTStates() > tsPerFrame) {
         
         core->ResetTStates(tsPerFrame);
         core->SignalInterrupt();
         
-        // Looks like we need to add 32px to the start position in the screen image. This kinda makes sense
-        // as tState 0 of a frame is actually 32 pixels into the screen at the start of the vblank.
-        pixelBeamX = -emuLeftBorderChars;
-        pixelBeamY = -emuTopBorderLines;
-        emuDrawTs = 14336 - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar);
-        emuCurrentLineStartTs = emuDrawTs;
-        emuDisplayBufferIndex = 0;
+        // Reset the drawing vars.
+        [self displayStartFrame];
+        
         frameCounter++;
     }
     
@@ -389,7 +376,7 @@ KeyboardEntry keyboardLookup[] = {
 - (void)updateSreenWithTStates {
     
     // Keep drawing 8x1 screen chucks based on the number of Ts in the current frame
-    while (emuDrawTs <= core->GetTStates() && emuDrawTs != -1) {
+    while (emuDisplayTs <= core->GetTStates() && emuDisplayTs != -1) {
         
         // Draw the borders
         if (pixelBeamY < 0 || pixelBeamY >= 192 || pixelBeamX < 0 || pixelBeamX >= 32) {
@@ -439,7 +426,7 @@ KeyboardEntry keyboardLookup[] = {
         
         if (pixelBeamX < emuBeamXMax) {
             // Not reached the right edge of the screen so update the drawing Ts by 1 char
-            emuDrawTs += tsPerChar;
+            emuDisplayTs += tsPerChar;
         } else {
             
             // Reached the right edge of the screen so reset the X beam and drop down one line
@@ -455,10 +442,10 @@ KeyboardEntry keyboardLookup[] = {
             // If we are not past the bottom of the screen then update the drawing Ts with an entire line
             if (pixelBeamY < emuBeamYMax) {
                 emuCurrentLineStartTs += tsPerLine;
-                emuDrawTs = emuCurrentLineStartTs;
+                emuDisplayTs = emuCurrentLineStartTs;
             } else {
                 // Finished the screen
-                emuDrawTs = -1;
+                emuDisplayTs = -1;
             }
         }
     }
@@ -485,6 +472,15 @@ KeyboardEntry keyboardLookup[] = {
     // Clean up
     CGDataProviderRelease(providerRef);
     CFRelease(dataRef);
+}
+
+- (void)displayStartFrame {
+    pixelBeamX = -emuLeftBorderChars;
+    pixelBeamY = -emuTopBorderLines;
+    emuDisplayTsOffset = 8;
+    emuDisplayTs = tsToOrigin - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar) - emuDisplayTsOffset;
+    emuCurrentLineStartTs = emuDisplayTs;
+    emuDisplayBufferIndex = 0;
 }
 
 #pragma mark - Audio
@@ -630,33 +626,8 @@ static void coreMemoryContention(unsigned short address, unsigned int tstates, i
 }
 
 static void coreIOContention(unsigned short address, unsigned int tstates, int param) {
-
-
+    // NOT USED
 }
-
-//static void portLate(unsigned short address) {
-//    if ((address & 1) == 0) {
-//        core->AddTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
-//        core->AddTStates(2);
-//    } else {
-//        if (address >= 16384 && address <= 32767) {
-//            core->AddTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
-//            core->AddTStates(1);
-//            core->AddTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
-//            core->AddTStates(1);
-//            core->AddTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
-//        } else {
-//            core->AddTStates(2);
-//        }
-//    }
-//}
-//
-//static void portEarly(unsigned short address) {
-//    if (address >= 16384 && address <= 32767) {
-//        core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
-//    }
-//    core->AddTStates(1);
-//}
 
 #pragma mark - Contention Tables
 
@@ -667,7 +638,9 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
         memoryContentionTable[i] = 0;
         ioContentionTable[i] = 0;
         
-        int ts = i - ((tsTopBorder + tsVerticalBlank) - 1);
+        // 14336 Ts is reported by most ZX Spectrum machines while there were a percentage that would
+        // respond to the /INT late report 14335 Ts. We are setting up contention for 14336 Ts
+        int ts = i - (tsTopBorder + tsVerticalBlank);
 
         if (ts >= 0 && ts < (int)tsVerticalDisplay) {
             int perLine = ts % tsPerLine;
@@ -745,6 +718,7 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
         core->SetRegister(CZ80Core::eREG_PC, (pc_msb << 8) | pc_lsb);
         core->SetRegister(CZ80Core::eREG_SP, core->GetRegister(CZ80Core::eREG_SP) + 2);
         
+        [self displayStartFrame];
     }
 }
 
