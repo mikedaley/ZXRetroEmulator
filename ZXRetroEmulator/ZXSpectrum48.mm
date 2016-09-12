@@ -128,7 +128,11 @@ int             attrAddress;
 int             audioStepTStates;
 float           audioValue;
 int             audioTStates;
+int             audioEar;
+int             audioMic;
+int             audioSampleRate;
 bool            beeperOn;
+static double soundLevel[4]={0.39/3.79,0.77/3.79,3.66/3.79,3.79/3.79};
 
 // Events
 
@@ -277,56 +281,63 @@ KeyboardEntry keyboardLookup[] = {
         // Setup the display buffer and length used to store the output from the emulator
         emuDisplayBufferLength = (emuDisplayPxWidth * emuDisplayPxHeight) * emuDisplayBytesPerPx;
         emuDisplayBuffer = (unsigned char *)malloc(emuDisplayBufferLength);
-        
-        float fps = 50.08;
 
-        _audioCore = [[AudioCore alloc] initWithSampleRate:44100 framesPerSecond:fps];
+        _emulationQueue = dispatch_queue_create("emulationQueue", nil);
+
+        float fps = 3500000.0 / 69888.0;
         
-        audioStepTStates = (tsPerFrame * fps) / 44100;
+        audioSampleRate = 192000;
+        
+        _audioCore = [[AudioCore alloc] initWithSampleRate:audioSampleRate
+                                           framesPerSecond:fps
+                                            emulationQueue:_emulationQueue
+                                                   machine:self];
+        
+        audioStepTStates = (tsPerFrame * fps) / audioSampleRate;
         
         [self buildContentionTable];
         [self resetKeyboardMap];
         [self loadDefaultROM];
         
-        _emulationQueue = dispatch_queue_create("emulationQueue", nil);
-        _emulationTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, _emulationQueue);
-        dispatch_source_set_timer(_emulationTimer, DISPATCH_TIME_NOW, 1.0/fps * NSEC_PER_SEC, 0);
-        dispatch_source_set_event_handler(_emulationTimer, ^{
-            
-            switch (event) {
-                case None:
-                    break;
-
-                case Reset:
-                    event = None;
-                    [self reset];
-                    break;
-                    
-                case Snapshot:
-                    [self reset];
-                    [self loadSnapshot];
-                    event = None;
-                    break;
-                    
-                default:
-                    break;
-            }
-            
-            [self doFrame];
-            [self generateImage];
-
-            dispatch_async(dispatch_get_main_queue(), ^{
-                self.emulationView.layer.contents = self.imageRef;
-            });
-        
-        });
+//        _emulationTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, _emulationQueue);
+//        dispatch_source_set_timer(_emulationTimer, DISPATCH_TIME_NOW, 1.0/fps * NSEC_PER_SEC, 0);
+//        dispatch_source_set_event_handler(_emulationTimer, ^{
+//            
+//            switch (event) {
+//                case None:
+//                    break;
+//
+//                case Reset:
+//                    event = None;
+//                    [self reset];
+//                    break;
+//                    
+//                case Snapshot:
+//                    [self reset];
+//                    [self loadSnapshot];
+//                    event = None;
+//                    break;
+//                    
+//                default:
+//                    break;
+//            }
+//            
+//            [self doFrame];
+//            [self generateImage];
+//
+//            dispatch_async(dispatch_get_main_queue(), ^{
+//                self.emulationView.layer.contents = self.imageRef;
+//            });
+//        
+//        });
         
     }
     return self;
 }
 
 - (void)startExecution {
-    dispatch_resume(_emulationTimer);
+//    dispatch_resume(_emulationTimer);
+    [self startFrame];
 }
 
 - (void)stopExecution {
@@ -346,9 +357,54 @@ KeyboardEntry keyboardLookup[] = {
 - (void)doFrame {
     
     int count = tsPerFrame;
+    
+    int so = 0;
+    double soc = 0;
+    
     while (count > 0) {
         count -= [self step];
+        
+        switch (event) {
+            case None:
+                break;
+
+            case Reset:
+                event = None;
+                [self reset];
+                break;
+
+            case Snapshot:
+                [self reset];
+                [self loadSnapshot];
+                event = None;
+                break;
+                
+            default:
+                break;
+        }
+        
+        uint8_t l = audioEar || audioMic;
+        
+        double beeperLevel = soundLevel[ l << 1 | audioMic ];
+        
+        if (so++ >= soc) {
+            
+            double idelta = soc - (so - 1);
+            
+            int16_t a = beeperLevel * idelta;
+            
+//            a = a * 0x7000;
+            
+            [self.audioCore updateBeeperAudioWithValue:a];
+            soc += 18.2;
+            
+        } else {
+            
+        }
     }
+    
+    [self.audioCore renderAudio];
+
 }
 
 - (int)step {
@@ -367,9 +423,25 @@ KeyboardEntry keyboardLookup[] = {
         [self startDisplayFrame];
         
         frameCounter++;
+        
     }
     
     return tsCPU;
+}
+
+- (void)startFrame {
+    
+    dispatch_async(self.emulationQueue, ^{
+        
+        [self doFrame];
+        [self generateImage];
+
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.emulationView.layer.contents = self.imageRef;
+        });
+
+    });
+
 }
 
 #pragma mark - Display
@@ -494,7 +566,7 @@ KeyboardEntry keyboardLookup[] = {
         audioValue += beeperOn ? (8192 * tStates) : 0;
         
         [self.audioCore updateBeeperAudioWithValue:audioValue / audioStepTStates];
-        
+
         numberTs = (audioTStates + numberTs) - audioStepTStates;
         audioValue = 0;
         audioTStates = 0;
@@ -614,6 +686,8 @@ static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
 
     if ((address & 0xff) == 0xfe) {
         borderColour = data & 0x07;
+        audioEar = (data & 0x10) >> 4;
+        audioMic = (data & 0x08) >> 3;
         beeperOn = (data & 0x10) ? true : false;
     }
 }

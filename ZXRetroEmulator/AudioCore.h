@@ -8,7 +8,12 @@
 
 #import <Foundation/Foundation.h>
 
+@class ZXSpectrum48;
+
 @interface AudioCore : NSObject
+
+@property (assign) double lowPassFilter;
+@property (assign) double highPassFilter;
 
 /*! @method initWithSampleRate:fps
 	@abstract
@@ -16,7 +21,7 @@
 	@param sampleRate to be used for audio
 	@param framesPerSecond being rendered which is used to calculate the frame capacity for each audio buffer
  */
-- (instancetype)initWithSampleRate:(int)sampleRate framesPerSecond:(int)fps;
+- (instancetype)initWithSampleRate:(int)sampleRate framesPerSecond:(float)fps emulationQueue:queue machine:(ZXSpectrum48 *)machine;
 
 /*! @method updateBeeperAudioWithValue:
 	@abstract
@@ -27,5 +32,7 @@
  which is calculated as (framesTStates / FPS) / sampleRate e.g. (69888 / 50) / 44100
  */
 - (void)updateBeeperAudioWithValue:(float)value;
+
+- (void)renderAudio;
 
 @end
