@@ -284,9 +284,9 @@ KeyboardEntry keyboardLookup[] = {
 
         _emulationQueue = dispatch_queue_create("emulationQueue", nil);
 
-        float fps = 3500000.0 / 69888.0;
+        float fps = 50;
         
-        audioSampleRate = 192000;
+        audioSampleRate = 44100;
         
         _audioCore = [[AudioCore alloc] initWithSampleRate:audioSampleRate
                                            framesPerSecond:fps
@@ -299,45 +299,13 @@ KeyboardEntry keyboardLookup[] = {
         [self resetKeyboardMap];
         [self loadDefaultROM];
         
-//        _emulationTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, _emulationQueue);
-//        dispatch_source_set_timer(_emulationTimer, DISPATCH_TIME_NOW, 1.0/fps * NSEC_PER_SEC, 0);
-//        dispatch_source_set_event_handler(_emulationTimer, ^{
-//            
-//            switch (event) {
-//                case None:
-//                    break;
-//
-//                case Reset:
-//                    event = None;
-//                    [self reset];
-//                    break;
-//                    
-//                case Snapshot:
-//                    [self reset];
-//                    [self loadSnapshot];
-//                    event = None;
-//                    break;
-//                    
-//                default:
-//                    break;
-//            }
-//            
-//            [self doFrame];
-//            [self generateImage];
-//
-//            dispatch_async(dispatch_get_main_queue(), ^{
-//                self.emulationView.layer.contents = self.imageRef;
-//            });
-//        
-//        });
-        
     }
     return self;
 }
 
 - (void)startExecution {
 //    dispatch_resume(_emulationTimer);
-    [self startFrame];
+    [self doFrame];
 }
 
 - (void)stopExecution {
@@ -354,25 +322,38 @@ KeyboardEntry keyboardLookup[] = {
     [self resetKeyboardMap];
 }
 
-- (void)doFrame {
+- (void)generateFrame {
     
     int count = tsPerFrame;
     
-    int so = 0;
-    double soc = 0;
-    
     while (count > 0) {
         count -= [self step];
+    }
+}
+
+- (int)step {
+    
+    int tsCPU = core->Execute(1);
+    
+    [self updateSreenWithTStates];
+    [self updateAudioWithTStates:tsCPU];
+    
+    return tsCPU;
+}
+
+- (void)doFrame {
+    
+    dispatch_async(self.emulationQueue, ^{
         
         switch (event) {
             case None:
                 break;
-
+                
             case Reset:
                 event = None;
                 [self reset];
                 break;
-
+                
             case Snapshot:
                 [self reset];
                 [self loadSnapshot];
@@ -383,65 +364,48 @@ KeyboardEntry keyboardLookup[] = {
                 break;
         }
         
-        uint8_t l = audioEar || audioMic;
-        
-        double beeperLevel = soundLevel[ l << 1 | audioMic ];
-        
-        if (so++ >= soc) {
-            
-            double idelta = soc - (so - 1);
-            
-            int16_t a = beeperLevel * idelta;
-            
-//            a = a * 0x7000;
-            
-            [self.audioCore updateBeeperAudioWithValue:a];
-            soc += 18.2;
-            
-        } else {
-            
-        }
-    }
-    
-    [self.audioCore renderAudio];
+        [self generateFrame];
 
-}
-
-- (int)step {
-    
-    int tsCPU = core->Execute(1);
-    
-    [self updateSreenWithTStates];
-    [self updateAudioWithTStates:tsCPU];
-    
-    if (core->GetTStates() > tsPerFrame) {
+        [self.audioCore renderAudio];
         
-        core->ResetTStates(tsPerFrame);
-        core->SignalInterrupt();
-        
-        // Reset the drawing vars.
-        [self startDisplayFrame];
-        
-        frameCounter++;
-        
-    }
-    
-    return tsCPU;
-}
-
-- (void)startFrame {
-    
-    dispatch_async(self.emulationQueue, ^{
-        
-        [self doFrame];
         [self generateImage];
 
         dispatch_async(dispatch_get_main_queue(), ^{
             self.emulationView.layer.contents = self.imageRef;
         });
 
+        // Signal an interrupt
+        core->ResetTStates(tsPerFrame);
+        core->SignalInterrupt();
+        frameCounter++;
+        
+        // Reset the drawing variables
+        [self startDisplayFrame];
+        
     });
 
+}
+
+#pragma mark - Audio
+
+- (void)updateAudioWithTStates:(int)numberTs {
+    
+    while (audioTStates + numberTs > audioStepTStates) {
+        
+        int tStates = audioStepTStates - audioTStates;
+        
+        audioValue += beeperOn ? tStates : 0;
+        
+        [self.audioCore updateBeeperAudioWithValue:audioValue / audioStepTStates];
+        
+        numberTs = (audioTStates + numberTs) - audioStepTStates;
+        audioValue = 0;
+        audioTStates = 0;
+        
+    }
+    
+    audioValue += beeperOn ? numberTs : 0;
+    audioTStates += numberTs;
 }
 
 #pragma mark - Display
@@ -553,28 +517,6 @@ KeyboardEntry keyboardLookup[] = {
     emuDisplayTs = tsToOrigin - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar) - emuDisplayTsOffset;
     emuCurrentLineStartTs = emuDisplayTs;
     emuDisplayBufferIndex = 0;
-}
-
-#pragma mark - Audio
-
-- (void)updateAudioWithTStates:(int)numberTs {
-    
-    while (audioTStates + numberTs > audioStepTStates) {
-        
-        int tStates = audioStepTStates - audioTStates;
-        
-        audioValue += beeperOn ? (8192 * tStates) : 0;
-        
-        [self.audioCore updateBeeperAudioWithValue:audioValue / audioStepTStates];
-
-        numberTs = (audioTStates + numberTs) - audioStepTStates;
-        audioValue = 0;
-        audioTStates = 0;
-        
-    }
-    
-    audioValue += beeperOn ? (8192 * numberTs) : 0;
-    audioTStates += numberTs;
 }
 
 #pragma mark - Memory & IO methods

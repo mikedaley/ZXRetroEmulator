@@ -20,6 +20,6 @@
 - (void)stopExecution;
 - (void)loadSnapshotWithPath:(NSString *)path;
 - (void)reset;
-- (void)startFrame;
+- (void)doFrame;
 
 @end
