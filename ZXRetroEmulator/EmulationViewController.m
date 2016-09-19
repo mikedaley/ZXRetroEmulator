@@ -7,8 +7,14 @@
 //
 
 #import "EmulationViewController.h"
+#import "AppDelegate.h"
+#import "ZXSpectrum48.h"
+#import "AudioCore.h"
 
 @interface EmulationViewController ()
+
+@property (weak) AppDelegate *appDelegate;
+
 
 @end
 
@@ -21,8 +27,7 @@
     self.view.wantsLayer = YES;
     self.view.layer.magnificationFilter = kCAFilterNearest;
     
-
-        
+    _appDelegate = (AppDelegate *)[NSApplication sharedApplication].delegate;
     
 }
 
@@ -42,6 +47,19 @@
     if ([self.delegate respondsToSelector:@selector(flagsChanged:)]) {
         [self.delegate flagsChanged:theEvent];
     }
+}
+
+#pragma Sliders
+
+- (IBAction)highPassFilterChanged:(id)sender
+{
+    self.appDelegate.machine.audioCore.highPassFilter = [sender floatValue];
+    
+}
+
+- (IBAction)lowPassFilterChanged:(id)sender
+{
+    self.appDelegate.machine.audioCore.lowPassFilter = [sender floatValue];
 }
 
 @end

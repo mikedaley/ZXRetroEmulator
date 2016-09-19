@@ -25,8 +25,6 @@
 @property (assign) NSInteger viewWidth;
 @property (assign) NSInteger viewHeight;
 
-@property (strong) ZXSpectrum48 *machine;
-
 @end
 
 #pragma mark - Implementation 
@@ -46,8 +44,8 @@
     _emulationViewController.delegate = _machine;
     [_machine startExecution];
     
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"beep" ofType:@"sna"];
-    [_machine loadSnapshotWithPath:path];
+//    NSString *path = [[NSBundle mainBundle] pathForResource:@"beep" ofType:@"sna"];
+//    [_machine loadSnapshotWithPath:path];
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification {

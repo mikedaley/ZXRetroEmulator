@@ -10,7 +10,6 @@
 		ED3650111D7AFA6D00A6383B /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = ED3650101D7AFA6D00A6383B /* AppDelegate.m */; };
 		ED3650141D7AFA6D00A6383B /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = ED3650131D7AFA6D00A6383B /* main.m */; };
 		ED3650161D7AFA6D00A6383B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ED3650151D7AFA6D00A6383B /* Assets.xcassets */; };
-		ED3650191D7AFA6D00A6383B /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = ED3650171D7AFA6D00A6383B /* MainMenu.xib */; };
 		ED3650281D7AFADA00A6383B /* 48.ROM in Resources */ = {isa = PBXBuildFile; fileRef = ED3650271D7AFADA00A6383B /* 48.ROM */; };
 		ED3650381D7AFAE400A6383B /* Z80Core.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ED36502A1D7AFAE400A6383B /* Z80Core.cpp */; };
 		ED3650391D7AFAE400A6383B /* Z80Core_MainOpcodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ED36502D1D7AFAE400A6383B /* Z80Core_MainOpcodes.cpp */; };
@@ -27,6 +26,7 @@
 		ED3650511D7B2C0700A6383B /* AudioCore.m in Sources */ = {isa = PBXBuildFile; fileRef = ED3650501D7B2C0700A6383B /* AudioCore.m */; };
 		ED3801531D8ADE4600C9E78B /* AudioQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = ED3801521D8ADE4600C9E78B /* AudioQueue.m */; };
 		ED5A32C21D903DDD00BD2327 /* beep.sna in Resources */ = {isa = PBXBuildFile; fileRef = ED5A32C11D903DDD00BD2327 /* beep.sna */; };
+		ED5A32C51D90652100BD2327 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = ED5A32C31D90652100BD2327 /* MainMenu.xib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,7 +35,6 @@
 		ED3650101D7AFA6D00A6383B /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		ED3650131D7AFA6D00A6383B /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		ED3650151D7AFA6D00A6383B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		ED3650181D7AFA6D00A6383B /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		ED36501A1D7AFA6D00A6383B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ED3650271D7AFADA00A6383B /* 48.ROM */ = {isa = PBXFileReference; lastKnownFileType = file; path = 48.ROM; sourceTree = "<group>"; };
 		ED3650291D7AFAE400A6383B /* Z80Core.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Z80Core.h; sourceTree = "<group>"; };
@@ -67,6 +66,7 @@
 		ED3801511D8ADE4600C9E78B /* AudioQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioQueue.h; sourceTree = "<group>"; };
 		ED3801521D8ADE4600C9E78B /* AudioQueue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AudioQueue.m; sourceTree = "<group>"; };
 		ED5A32C11D903DDD00BD2327 /* beep.sna */ = {isa = PBXFileReference; lastKnownFileType = file; path = beep.sna; sourceTree = "<group>"; };
+		ED5A32C41D90652100BD2327 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -166,7 +166,7 @@
 		ED3650231D7AFA9F00A6383B /* UI */ = {
 			isa = PBXGroup;
 			children = (
-				ED3650171D7AFA6D00A6383B /* MainMenu.xib */,
+				ED5A32C31D90652100BD2327 /* MainMenu.xib */,
 			);
 			name = UI;
 			sourceTree = "<group>";
@@ -278,10 +278,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				ED3650161D7AFA6D00A6383B /* Assets.xcassets in Resources */,
+				ED5A32C51D90652100BD2327 /* MainMenu.xib in Resources */,
 				ED3650471D7AFB6B00A6383B /* EmulationViewController.xib in Resources */,
 				ED3650281D7AFADA00A6383B /* 48.ROM in Resources */,
 				ED5A32C21D903DDD00BD2327 /* beep.sna in Resources */,
-				ED3650191D7AFA6D00A6383B /* MainMenu.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -312,10 +312,10 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		ED3650171D7AFA6D00A6383B /* MainMenu.xib */ = {
+		ED5A32C31D90652100BD2327 /* MainMenu.xib */ = {
 			isa = PBXVariantGroup;
 			children = (
-				ED3650181D7AFA6D00A6383B /* Base */,
+				ED5A32C41D90652100BD2327 /* Base */,
 			);
 			name = MainMenu.xib;
 			sourceTree = "<group>";

@@ -8,8 +8,11 @@
 
 #import <Cocoa/Cocoa.h>
 
+@class ZXSpectrum48;
+
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 
+@property (strong) ZXSpectrum48 *machine;
 
 @end
 

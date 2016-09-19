@@ -126,8 +126,6 @@ static OSStatus renderAudio(void *inRefCon,AudioUnitRenderActionFlags *ioActionF
 
 static OSStatus renderAudio(void *inRefCon,AudioUnitRenderActionFlags *ioActionFlags,const AudioTimeStamp *inTimeStamp,UInt32 inBusNumber,UInt32 inNumberFrames,AudioBufferList *ioData)
 {
-//    NSLog(@"Frames: %u", (unsigned int)inNumberFrames);
-
     AudioCore *audioCore = (__bridge AudioCore *)inRefCon;
 
     // Grab the buffer that core audio has passed in and reset its contents to 0

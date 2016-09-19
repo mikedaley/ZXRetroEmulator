@@ -9,11 +9,15 @@
 #import <Cocoa/Cocoa.h>
 #import "ViewEventProtocol.h"
 
+@class AudioCore;
+
 @interface ZXSpectrum48 : NSObject <ViewEventProtocol>
 
 #pragma mark - Properties
 
 @property (assign) int16_t *audioBuffer;
+
+@property (strong) AudioCore *audioCore;
 
 #pragma mark - Methods
 

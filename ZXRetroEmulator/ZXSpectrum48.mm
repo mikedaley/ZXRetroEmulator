@@ -22,7 +22,6 @@
 @property (assign) CGColorSpaceRef colourSpace;
 @property (strong) id imageRef;
 @property (strong) NSString *snapshotPath;
-@property (strong) AudioCore *audioCore;
 
 @end
 
@@ -292,7 +291,7 @@ KeyboardEntry keyboardLookup[] = {
         float fps = 50;
         
         audioSampleRate = 192000;
-        audioBufferSize = 100000;
+        audioBufferSize = 3840 * 4;
         _audioBuffer = (int16_t *)malloc(audioBufferSize);
         [self resetSound];
         audioBeeperValue = 0;
@@ -346,19 +345,15 @@ KeyboardEntry keyboardLookup[] = {
 
 - (void)generateFrame
 {
-    
     int count = tsPerFrame;
     while (count > 0) {
         count -= [self step];
     }
-    
 }
 
 - (int)step
 {
-
     int tsCPU = core->Execute(1);
-    
     [self updateSreenWithTStates];
     [self updateAudioWithTStates:tsCPU];
     
@@ -367,7 +362,8 @@ KeyboardEntry keyboardLookup[] = {
 
 - (void)doFrame
 {
-    
+    // Check if there are any events to be done before generating the frame. This is an easy way
+    // of getting code in this thread to run synchronously
     dispatch_async(self.emulationQueue, ^{
         
         switch (event) {
