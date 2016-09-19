@@ -45,6 +45,9 @@
     _machine = [[ZXSpectrum48 alloc] initWithEmulationScreenView:_emulationViewController.view];
     _emulationViewController.delegate = _machine;
     [_machine startExecution];
+    
+    NSString *path = [[NSBundle mainBundle] pathForResource:@"beep" ofType:@"sna"];
+    [_machine loadSnapshotWithPath:path];
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification {

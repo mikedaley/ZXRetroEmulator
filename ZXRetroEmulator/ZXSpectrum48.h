@@ -13,6 +13,8 @@
 
 #pragma mark - Properties
 
+@property (assign) int16_t *audioBuffer;
+
 #pragma mark - Methods
 
 - (instancetype)initWithEmulationScreenView:(NSView *)view;

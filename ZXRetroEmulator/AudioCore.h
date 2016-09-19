@@ -12,8 +12,8 @@
 
 @interface AudioCore : NSObject
 
-@property (assign) double lowPassFilter;
-@property (assign) double highPassFilter;
+@property (nonatomic) double lowPassFilter;
+@property (nonatomic) double highPassFilter;
 
 /*! @method initWithSampleRate:fps
 	@abstract
@@ -31,8 +31,7 @@
  This method is called when the number of T-States in a frame exceeds the audio step could
  which is calculated as (framesTStates / FPS) / sampleRate e.g. (69888 / 50) / 44100
  */
-- (void)updateBeeperAudioWithValue:(float)value;
+//- (void)updateBeeperAudioWithValue:(float)value;
 
-- (void)renderAudio;
 
 @end

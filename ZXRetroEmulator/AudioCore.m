@@ -6,51 +6,38 @@
 //  Copyright © 2016 71Squared Ltd. All rights reserved.
 //
 
-#import "AudioCore.h"
 #import <AVFoundation/AVFoundation.h>
+
+#import "AudioCore.h"
 #import "ZXSpectrum48.h"
+#import "AudioQueue.h"
 
 #pragma mark - Private interface
 
 @interface AudioCore ()
 
-// AVAudioEngine ivars
-@property (strong) AVAudioEngine *audioEngine;
-@property (strong) AVAudioPlayerNode *playerNode;
-@property (strong) AVAudioMixerNode *mixerNode;
-@property (strong) NSMutableArray *buffers;
-
-// Total number of buffers to be created
-@property (assign) NSInteger totalBuffers;
-
-// Current buffer being written too and the position within the buffer
-@property (assign) NSInteger currentBuffer;
-@property (assign) NSInteger currentBufferPosition;
-
-// Number of sample frames within a buffer
-@property (assign) unsigned int frameLength;
-@property (assign) unsigned int frameCapacity;
-
-@property (assign)dispatch_queue_t emulationQueue;
+// Reference to the machine using the audio core
 @property (weak) ZXSpectrum48 *machine;
 
-//@property AUGraph graph;
-//@property AUNode outNode;
-//@property AUNode converterNode;
-//@property AUNode lowPassNode;
-//@property AUNode highPassNode;
+// reference to the emulation queue that is being used to drive the emulation
+@property (assign) dispatch_queue_t emulationQueue;
+
+// Queue used to control the samples being provided to Core Audio
+@property (strong) AudioQueue *queue;
+
+// Properties used to store the CoreAudio graph and nodes, including the high and low pass effects nodes
+@property (assign) AUGraph graph;
+@property (assign) AUNode outNode;
+@property (assign) AUNode converterNode;
+@property (assign) AUNode lowPassNode;
+@property (assign) AUNode highPassNode;
 
 @end
 
-//#define kSAMPLE_RATE 192000
-//#define kCHUNK 3840
-//
-//// Audio render callback
-//static OSStatus renderAudio(void *inRefCon,
-//                            AudioUnitRenderActionFlags *ioActionFlags,
-//                            const AudioTimeStamp *inTimeStamp,UInt32 inBusNumber,
-//                            UInt32 inNumberFrames,
-//                            AudioBufferList *ioData);
+// Signature of the CoreAudio render callback. This is called by CoreAudio when it needs more data in its buffer.
+// By using AudioQueue we can generate another new frame of data at 50.08 fps making sure that the audio stays in
+// sync with the frames.
+static OSStatus renderAudio(void *inRefCon,AudioUnitRenderActionFlags *ioActionFlags,const AudioTimeStamp *inTimeStamp,UInt32 inBusNumber,UInt32 inNumberFrames,AudioBufferList *ioData);
 
 #pragma mark - Implementation
 
@@ -61,156 +48,125 @@
     self = [super init];
     if (self) {
         
-        _machine = machine;
         _emulationQueue = queue;
-        _frameLength = (sampleRate / fps);
-        _frameCapacity = _frameLength;
+        _queue = [AudioQueue queue];
+        _machine = machine;
         
-        _audioEngine = [AVAudioEngine new];
-        _playerNode = [AVAudioPlayerNode new];
+        NewAUGraph(&_graph);
         
-        _mixerNode = [_audioEngine mainMixerNode];
-        [_mixerNode setOutputVolume:0.5];
+        // Output Node
+        AudioComponentDescription componentDescription;
+        componentDescription.componentType = kAudioUnitType_Output;
+        componentDescription.componentSubType = kAudioUnitSubType_DefaultOutput;
+        componentDescription.componentManufacturer = kAudioUnitManufacturer_Apple;
+        AUGraphAddNode(_graph, &componentDescription, &_outNode);
         
-//         Playing with improving the sound output using filters :)
-//        AVAudioUnitEQ *eqnode = [[AVAudioUnitEQ alloc] initWithNumberOfBands:2];
-//        eqnode.globalGain = 1;
-//        [_audioEngine attachNode:eqnode];
-//        AVAudioUnitEQFilterParameters *params = eqnode.bands[0];
-//        params.filterType = AVAudioUnitEQFilterTypeLowPass;
-//        params.bandwidth = 1;
-//        params.frequency = 1021;
-//        params.gain = 15;
+        // Low pass effect node
+        componentDescription.componentType = kAudioUnitType_Effect;
+        componentDescription.componentSubType = kAudioUnitSubType_LowPassFilter;
+        componentDescription.componentManufacturer = kAudioUnitManufacturer_Apple;
+        AUGraphAddNode(_graph, &componentDescription, &_lowPassNode);
         
-        AVAudioFormat *audioFormat = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32
-                                                                      sampleRate:sampleRate
-                                                                        channels:1
-                                                                     interleaved:NO];
-        _totalBuffers = 1;
+        AUGraphConnectNodeInput(_graph, _lowPassNode, 0, _outNode, 0);
         
-        _buffers = [NSMutableArray new];
-        for (int i = 0; i < _totalBuffers; i++) {
-            AVAudioPCMBuffer *buffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:audioFormat frameCapacity:self.frameCapacity];
-            buffer.frameLength = _frameLength;
-            [_buffers addObject:buffer];
-        }
+        // High pass effect node
+        componentDescription.componentType = kAudioUnitType_Effect;
+        componentDescription.componentSubType = kAudioUnitSubType_HighPassFilter;
+        componentDescription.componentManufacturer = kAudioUnitManufacturer_Apple;
+        AUGraphAddNode(_graph, &componentDescription, &_highPassNode);
         
-        [_audioEngine attachNode:_playerNode];
-        [_audioEngine connect:_playerNode to:_mixerNode format:audioFormat];
-//        [_audioEngine connect:eqnode to:_mixerNode format:audioFormat];
+        AUGraphConnectNodeInput(_graph, _highPassNode, 0, _lowPassNode, 0);
         
-        [_audioEngine startAndReturnError:nil];
-        [_playerNode play];
+        // Converter node
+        componentDescription.componentType = kAudioUnitType_FormatConverter;
+        componentDescription.componentSubType = kAudioUnitSubType_AUConverter;
+        componentDescription.componentManufacturer = kAudioUnitManufacturer_Apple;
+        AUGraphAddNode(_graph, &componentDescription, &_converterNode);
         
-        _currentBuffer = 0;
-        _currentBufferPosition = 0;
+        AUGraphConnectNodeInput(_graph, _converterNode, 0, _highPassNode, 0);
         
+        AUGraphOpen(_graph);
+        
+        // Buffer format
+        AudioStreamBasicDescription bufferFormat;
+        bufferFormat.mFormatID = kAudioFormatLinearPCM;
+        bufferFormat.mFormatFlags = kAudioFormatFlagIsPacked | kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian;
+        bufferFormat.mSampleRate = sampleRate;
+        bufferFormat.mBitsPerChannel = 16;
+        bufferFormat.mChannelsPerFrame = 2;
+        bufferFormat.mBytesPerFrame = 4;
+        bufferFormat.mFramesPerPacket = 1;
+        bufferFormat.mBytesPerPacket = 4;
+        
+        // Set the frames per slice property on the converter node
+        AudioUnit convert;
+        AUGraphNodeInfo(_graph, _converterNode, NULL, &convert);
+        AudioUnitSetProperty(convert, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &bufferFormat, sizeof(bufferFormat));
+        
+        uint32 framesPerSlice = 882;
+        AudioUnitSetProperty(convert, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Input, 0, &framesPerSlice, sizeof(framesPerSlice));
+        
+        // define the callback for rendering audio
+        AURenderCallbackStruct renderCallbackStruct;
+        renderCallbackStruct.inputProc = renderAudio;
+        renderCallbackStruct.inputProcRefCon = (__bridge void *)self;
+        
+        // Attach the audio callback to the converterNode
+        AUGraphSetNodeInputCallback(_graph, _converterNode, 0, &renderCallbackStruct);
+        AUGraphInitialize(_graph);
+        AUGraphStart(_graph);
+        
+        // Initial filter settings
+        self.lowPassFilter = 5000;
+        self.highPassFilter = 50;
+
     }
     return self;
 }
 
-- (void)updateBeeperAudioWithValue:(float)value
+static OSStatus renderAudio(void *inRefCon,AudioUnitRenderActionFlags *ioActionFlags,const AudioTimeStamp *inTimeStamp,UInt32 inBusNumber,UInt32 inNumberFrames,AudioBufferList *ioData)
 {
-    AVAudioPCMBuffer *buffer = [self.buffers objectAtIndex:self.currentBuffer];
-    float * const data = buffer.floatChannelData[0];
-    data[_currentBufferPosition++] = value;
+//    NSLog(@"Frames: %u", (unsigned int)inNumberFrames);
+
+    AudioCore *audioCore = (__bridge AudioCore *)inRefCon;
+
+    // Grab the buffer that core audio has passed in and reset its contents to 0
+    int16_t *buffer = ioData->mBuffers[0].mData;
+    memset(buffer, 0, inNumberFrames << 2);
     
-    if (_currentBufferPosition > _frameCapacity) {
-        _currentBufferPosition = 0;
+    // Update the queue with the reset buffer
+    [audioCore.queue read:buffer count:(inNumberFrames << 1)];
+
+
+    if ([audioCore.queue used] < (3840 << 1))
+    {
+        dispatch_async(audioCore.emulationQueue, ^{
+            [audioCore.machine doFrame];
+        });
+        
+        [audioCore.queue write:audioCore.machine.audioBuffer count:(3840 << 1)];        
     }
     
-}
-
-- (void)renderAudio {
+    ioData->mBuffers[0].mDataByteSize = (inNumberFrames << 2);
     
-    AVAudioPCMBuffer *buffer = [self.buffers objectAtIndex:self.currentBuffer];
-    [self.playerNode scheduleBuffer:buffer completionHandler:^{
-        [self.machine doFrame];
-    }];
-    
-//    self.currentBufferPosition = 0;
-//    self.currentBuffer = (self.currentBuffer + 1) % self.totalBuffers;
+    return noErr;
     
 }
 
-//static OSStatus renderAudio(void *inRefCon,
-//                            AudioUnitRenderActionFlags *ioActionFlags,
-//                            const AudioTimeStamp *inTimeStamp,UInt32 inBusNumber,
-//                            UInt32 inNumberFrames,
-//                            AudioBufferList *ioData) {
-//    
-//    NSLog(@"hello");
-//    
-//    return noErr;
-//}
+- (void)setLowPassFilter:(double)lowPassFilter
+{
+    _lowPassFilter = lowPassFilter;
+    AudioUnit filterUnit;
+    AUGraphNodeInfo(_graph, _lowPassNode, NULL, &filterUnit);
+    AudioUnitSetParameter(filterUnit, 0, kAudioUnitScope_Global, 0, lowPassFilter, 0);
+}
 
+- (void)setHighPassFilter:(double)highPassFilter
+{
+    _highPassFilter = highPassFilter;
+    AudioUnit filterUnit;
+    AUGraphNodeInfo(_graph, _highPassNode, NULL, &filterUnit);
+    AudioUnitSetParameter(filterUnit, 0, kAudioUnitScope_Global, 0, highPassFilter, 0);
+}
 
 @end
-
-
-
-
-
-
-//        NewAUGraph(&_graph);
-//
-//        // Output Node
-//        AudioComponentDescription audioUnitDesc;
-//        audioUnitDesc.componentType = kAudioUnitType_Output;
-//        audioUnitDesc.componentSubType = kAudioUnitSubType_DefaultOutput;
-//        audioUnitDesc.componentManufacturer = kAudioUnitManufacturer_Apple;
-//        AUGraphAddNode(_graph, &audioUnitDesc, &_outNode);
-//
-//        // Low Pass Filter
-//        audioUnitDesc.componentType = kAudioUnitType_Effect;
-//        audioUnitDesc.componentSubType = kAudioUnitSubType_LowPassFilter;
-//        audioUnitDesc.componentManufacturer = kAudioUnitManufacturer_Apple;
-//        AUGraphAddNode(_graph, &audioUnitDesc, &_lowPassNode);
-//
-//        // High Pass Filter
-//        audioUnitDesc.componentType = kAudioUnitType_Effect;
-//        audioUnitDesc.componentSubType = kAudioUnitSubType_HighPassFilter;
-//        audioUnitDesc.componentManufacturer = kAudioUnitManufacturer_Apple;
-//        AUGraphAddNode(_graph, &audioUnitDesc, &_highPassNode);
-//
-//        // Converter Node
-//        audioUnitDesc.componentType = kAudioUnitType_FormatConverter;
-//        audioUnitDesc.componentSubType = kAudioUnitSubType_AUConverter;
-//        audioUnitDesc.componentManufacturer = kAudioUnitManufacturer_Apple;
-//        AUGraphAddNode(_graph, &audioUnitDesc, &_converterNode);
-//
-//        AUGraphConnectNodeInput(_graph, _converterNode, 0, _highPassNode, 0);
-//        AUGraphOpen(_graph);
-//
-//        // Define the format to be used during conversion
-//        AudioStreamBasicDescription format;
-//        format.mFormatID = kAudioFormatLinearPCM;
-//        format.mFormatFlags = kAudioFormatFlagIsPacked | kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian;
-//        format.mSampleRate = kSAMPLE_RATE;
-//        format.mBitsPerChannel = 16;
-//        format.mChannelsPerFrame = 2;
-//        format.mBytesPerFrame = 4;
-//        format.mFramesPerPacket = 1;
-//        format.mBytesPerPacket = 4;
-//
-//        AudioUnit convert;
-//        AUGraphNodeInfo(_graph, _converterNode, NULL, &convert);
-//        AudioUnitSetProperty(convert, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &format, sizeof(format));
-//        uint32 r = 882;
-//        AudioUnitSetProperty(convert, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Input, 0, &r, sizeof(r));
-//
-//        // Audio Render Callback
-//        AURenderCallbackStruct renderCallback;
-//        renderCallback.inputProc = renderAudio;
-//        renderCallback.inputProcRefCon = (__bridge void *)self;
-//
-//        AUGraphSetNodeInputCallback(_graph, _converterNode, 0, &renderCallback);
-//        AUGraphInitialize(_graph);
-//        AUGraphStop(_graph);
-//
-//        AUGraphStart(_graph);
-//
-//        self.lowPassFilter = 5000;
-//        self.highPassFilter = 50;
-
-

@@ -125,14 +125,18 @@ int             pixelAddress;
 int             attrAddress;
 
 // Audio
-int             audioStepTStates;
-float           audioValue;
-int             audioTStates;
+double          audioBeeperValue;
 int             audioEar;
 int             audioMic;
 int             audioSampleRate;
 bool            beeperOn;
-static double soundLevel[4]={0.39/3.79,0.77/3.79,3.66/3.79,3.79/3.79};
+double          soundLevel[4]={0.39/3.79, 0.77/3.79, 3.66/3.79, 3.79/3.79};
+int             audioBufferIndex;
+int             audioTStates;
+int             audioTsCounter;
+double          audioTsStepCounter;
+double          audioTsStep;
+int             audioBufferSize;
 
 // Events
 
@@ -228,7 +232,8 @@ KeyboardEntry keyboardLookup[] = {
 - (instancetype)initWithEmulationScreenView:(NSView *)view
 {
     self = [super init];
-    if (self) {
+    if (self)
+    {
         
         _emulationView = view;
         
@@ -237,7 +242,7 @@ KeyboardEntry keyboardLookup[] = {
         
         event = None;
 
-        borderColour = 1;
+        borderColour = 7;
         frameCounter = 0;
         
         _colourSpace = CGColorSpaceCreateDeviceRGB();
@@ -274,7 +279,7 @@ KeyboardEntry keyboardLookup[] = {
 
         emuDisplayPxWidth = 256 + 8 * (emuLeftBorderChars + emuRightBorderChars);
         emuDisplayPxHeight = 192 + emuTopBorderLines + emuBottomBorderLines;
-        emuDisplayTsOffset = 4;
+        emuDisplayTsOffset = 7;
 
         [self startDisplayFrame];
         
@@ -286,15 +291,20 @@ KeyboardEntry keyboardLookup[] = {
 
         float fps = 50;
         
-        audioSampleRate = 44100;
+        audioSampleRate = 192000;
+        audioBufferSize = 100000;
+        _audioBuffer = (int16_t *)malloc(audioBufferSize);
+        [self resetSound];
+        audioBeeperValue = 0;
+        audioBufferIndex = 0;
+        audioTsCounter = 0;
+        audioTsStepCounter = 0;
+        audioTsStep = tsPerFrame / (audioSampleRate / fps);
         
         _audioCore = [[AudioCore alloc] initWithSampleRate:audioSampleRate
                                            framesPerSecond:fps
                                             emulationQueue:_emulationQueue
                                                    machine:self];
-        
-        audioStepTStates = (tsPerFrame * fps) / audioSampleRate;
-        
         [self buildContentionTable];
         [self resetKeyboardMap];
         [self loadDefaultROM];
@@ -303,36 +313,50 @@ KeyboardEntry keyboardLookup[] = {
     return self;
 }
 
-- (void)startExecution {
+- (void)startExecution
+{
 //    dispatch_resume(_emulationTimer);
     [self doFrame];
 }
 
-- (void)stopExecution {
+- (void)stopExecution
+{
     dispatch_suspend(_emulationTimer);
 }
 
 #pragma mark - CPU
 
-- (void)reset {
+- (void)reset
+{
     core->Reset();
     frameCounter = 0;
     beeperOn = false;
+    [self resetSound];
     [self startDisplayFrame];
     [self resetKeyboardMap];
 }
 
-- (void)generateFrame {
+- (void)resetSound
+{
+    memset(_audioBuffer, 0, audioBufferSize);
+    audioTsCounter = 0;
+    audioTsStepCounter = 0;
+    audioBeeperValue = 0;
+}
+
+- (void)generateFrame
+{
     
     int count = tsPerFrame;
-    
     while (count > 0) {
         count -= [self step];
     }
+    
 }
 
-- (int)step {
-    
+- (int)step
+{
+
     int tsCPU = core->Execute(1);
     
     [self updateSreenWithTStates];
@@ -341,7 +365,8 @@ KeyboardEntry keyboardLookup[] = {
     return tsCPU;
 }
 
-- (void)doFrame {
+- (void)doFrame
+{
     
     dispatch_async(self.emulationQueue, ^{
         
@@ -364,18 +389,19 @@ KeyboardEntry keyboardLookup[] = {
                 break;
         }
         
+        // Run an entire frame
         [self generateFrame];
-
-        [self.audioCore renderAudio];
         
+        // Generate the output image from the emulators display buffer
         [self generateImage];
 
+        // Update the UI image with the new emulator image
         dispatch_async(dispatch_get_main_queue(), ^{
             self.emulationView.layer.contents = self.imageRef;
         });
 
         // Signal an interrupt
-        core->ResetTStates(tsPerFrame);
+        core->ResetTStates(core->GetTStates());
         core->SignalInterrupt();
         frameCounter++;
         
@@ -388,44 +414,64 @@ KeyboardEntry keyboardLookup[] = {
 
 #pragma mark - Audio
 
-- (void)updateAudioWithTStates:(int)numberTs {
-    
-    while (audioTStates + numberTs > audioStepTStates) {
+- (void)updateAudioWithTStates:(int)numberTs
+{
+    // Loop for as many tStates that have just been used by the previous CPU instruction
+    for(int i = 0; i < numberTs; i++) {
         
-        int tStates = audioStepTStates - audioTStates;
+        double beeperLevel = soundLevel[ audioEar << 1 | audioMic];
         
-        audioValue += beeperOn ? tStates : 0;
-        
-        [self.audioCore updateBeeperAudioWithValue:audioValue / audioStepTStates];
-        
-        numberTs = (audioTStates + numberTs) - audioStepTStates;
-        audioValue = 0;
-        audioTStates = 0;
-        
+        // If we have done more cycles now that the audio step counter generate a sample
+        if (audioTsCounter++ >= audioTsStepCounter)
+        {
+            // Quantize the value loaded into the audio buffer e.g. if cycles = 19 and step size is 18.2
+            // 0.2 of the beeper value does into this sample and 0.8 goes into the next sample
+            double delta1 = fabs(audioTsStepCounter - (audioTsCounter - 1));
+            double delta2 = (1 - delta1);
+            
+            // Quantize for the current sample
+            audioBeeperValue += (beeperLevel * delta1);
+            
+            // Load the buffer with the sample for both left and right channels
+            _audioBuffer[ audioBufferIndex++ ] = (int16_t)(audioBeeperValue * 256);
+            _audioBuffer[ audioBufferIndex++ ] = (int16_t)(audioBeeperValue * 256);
+            
+            // Quantize for the next sample
+            audioBeeperValue = (beeperLevel * delta2);
+            
+            // Increment the step counter
+            audioTsStepCounter += audioTsStep;
+            
+        } else {
+            audioBeeperValue += beeperLevel;
+        }
     }
-    
-    audioValue += beeperOn ? numberTs : 0;
-    audioTStates += numberTs;
+
 }
 
 #pragma mark - Display
 
-- (void)updateSreenWithTStates {
+- (void)updateSreenWithTStates
+{
     
     // Keep drawing 8x1 screen chucks based on the number of Ts in the current frame
     while (emuDisplayTs <= core->GetTStates() && emuDisplayTs != -1) {
         
         // Draw the borders
-        if (pixelBeamY < 0 || pixelBeamY >= 192 || pixelBeamX < 0 || pixelBeamX >= 32) {
+        if (pixelBeamY < 0 || pixelBeamY >= 192 || pixelBeamX < 0 || pixelBeamX >= 32)
+        {
             
-            for (int i = 0; i < 8; i ++) {
+            for (int i = 0; i < 8; i ++)
+            {
                 emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].r;
                 emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].g;
                 emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].b;
                 emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].a;
             }
             
-        } else { // Draw the main bitmap screen
+        }
+        else
+        { // Draw the main bitmap screen
             
             int pixelByte = memory[pixelAddress | pixelBeamX];
             int attributeByte = memory[attrAddress | pixelBeamX];
@@ -435,14 +481,16 @@ KeyboardEntry keyboardLookup[] = {
             int paper = ((attributeByte >> 3) & 0x07) + ((attributeByte & 0x40) >> 3);
             
             // Switch ink and paper if the flash phase has changed
-            if ((frameCounter & 16) && (attributeByte & 0x80)) {
+            if ((frameCounter & 16) && (attributeByte & 0x80))
+            {
                 int tempPaper = paper;
                 paper = ink;
                 ink = tempPaper;
             }
 
             // Loop through the current pixel byte drawing pixels into the screen image buffer
-            for (int b = 0x80; b; b >>= 1) {
+            for (int b = 0x80; b; b >>= 1)
+            {
                 
                 if (pixelByte & b) {
                     emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[ink].r;
@@ -461,7 +509,8 @@ KeyboardEntry keyboardLookup[] = {
         // Step the pixel beam 1 char position right, which is in effect 8 pixels
         pixelBeamX ++;
         
-        if (pixelBeamX < emuBeamXMax) {
+        if (pixelBeamX < emuBeamXMax)
+        {
             // Not reached the right edge of the screen so update the drawing Ts by 1 char
             emuDisplayTs += tsPerChar;
         } else {
@@ -477,7 +526,8 @@ KeyboardEntry keyboardLookup[] = {
             }
             
             // If we are not past the bottom of the screen then update the drawing Ts with an entire line
-            if (pixelBeamY < emuBeamYMax) {
+            if (pixelBeamY < emuBeamYMax)
+            {
                 emuCurrentLineStartTs += tsPerLine;
                 emuDisplayTs = emuCurrentLineStartTs;
             } else {
@@ -488,7 +538,8 @@ KeyboardEntry keyboardLookup[] = {
     }
 }
 
-- (void)generateImage {
+- (void)generateImage
+{
     
     CFDataRef dataRef = CFDataCreate(kCFAllocatorDefault, emuDisplayBuffer, emuDisplayBufferLength);
     
@@ -511,21 +562,29 @@ KeyboardEntry keyboardLookup[] = {
     CFRelease(dataRef);
 }
 
-- (void)startDisplayFrame {
+- (void)startDisplayFrame
+{
+    
+    // Reset display variables
     pixelBeamX = -emuLeftBorderChars;
     pixelBeamY = -emuTopBorderLines;
     emuDisplayTs = tsToOrigin - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar) - emuDisplayTsOffset;
     emuCurrentLineStartTs = emuDisplayTs;
     emuDisplayBufferIndex = 0;
+    
+    // Reset audio variables
+    audioBufferIndex = 0;
 }
 
 #pragma mark - Memory & IO methods
 
-static unsigned char coreMemoryRead(unsigned short address, int tstates) {
+static unsigned char coreMemoryRead(unsigned short address, int tstates)
+{
     return memory[address];
 }
 
-static void coreMemoryWrite(unsigned short address, unsigned char data, int tstates) {
+static void coreMemoryWrite(unsigned short address, unsigned char data, int tstates)
+{
     
     // Only allow writing to RAM not ROM
     if (address >= 16384) {
@@ -534,7 +593,8 @@ static void coreMemoryWrite(unsigned short address, unsigned char data, int tsta
     
 }
 
-static unsigned char coreIORead(unsigned short address, int tstates) {
+static unsigned char coreIORead(unsigned short address, int tstates)
+{
     
     // Calculate the necessary contention based on the Port number being accessed and if the port belongs to the ULA.
     // All non-even port numbers below to the ULA. N:x means no contention to be added and just advance the tStates.
@@ -548,8 +608,10 @@ static unsigned char coreIORead(unsigned short address, int tstates) {
     //		Yes   |  Reset  | C:1, C:3
     //		Yes   |   Set   | C:1, C:1, C:1, C:1
     //
-    if (address >= 16384 && address <= 32767) {
-        if ((address & 1) == 0) {
+    if (address >= 16384 && address <= 32767)
+    {
+        if ((address & 1) == 0)
+        {
             core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
             core->AddTStates(1);
             core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
@@ -565,7 +627,8 @@ static unsigned char coreIORead(unsigned short address, int tstates) {
             core->AddTStates(1);
         }
     } else {
-        if ((address & 1) == 0) {
+        if ((address & 1) == 0)
+        {
             core->AddTStates(1);
             core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
             core->AddTStates(3);
@@ -574,10 +637,13 @@ static unsigned char coreIORead(unsigned short address, int tstates) {
         }
     }
     
-    if ((address & 0xff) == 0xfe) {
-        for (int i = 0; i < 8; i++) {
+    if ((address & 0xff) == 0xfe)
+    {
+        for (int i = 0; i < 8; i++)
+        {
             int addr = address & (0x100 << i);
-            if (addr == 0) {
+            if (addr == 0)
+            {
                 return keyboardMap[i] & 0xff;
             }
         }
@@ -586,7 +652,8 @@ static unsigned char coreIORead(unsigned short address, int tstates) {
     return 0xff;
 }
 
-static void coreIOWrite(unsigned short address, unsigned char data, int tstates) {
+static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
+{
     
     // Calculate the necessary contention based on the Port number being accessed and if the port belongs to the ULA.
     // All non-even port numbers below to the ULA. N:x means no contention to be added and just advance the tStates.
@@ -600,8 +667,10 @@ static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
     //		Yes   |  Reset  | C:1, C:3
     //		Yes   |   Set   | C:1, C:1, C:1, C:1
     //
-    if (address >= 16384 && address <= 32767) {
-        if ((address & 1) == 0) {
+    if (address >= 16384 && address <= 32767)
+    {
+        if ((address & 1) == 0)
+        {
             core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
             core->AddTStates(1);
             core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
@@ -617,7 +686,8 @@ static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
             core->AddTStates(1);
         }
     } else {
-        if ((address & 1) == 0) {
+        if ((address & 1) == 0)
+        {
             core->AddTStates(1);
             core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
             core->AddTStates(3);
@@ -626,7 +696,8 @@ static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
         }
     }
 
-    if ((address & 0xff) == 0xfe) {
+    if ((address & 0xff) == 0xfe)
+    {
         borderColour = data & 0x07;
         audioEar = (data & 0x10) >> 4;
         audioMic = (data & 0x08) >> 3;
@@ -634,32 +705,38 @@ static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
     }
 }
 
-static void coreMemoryContention(unsigned short address, unsigned int tstates, int param) {
+static void coreMemoryContention(unsigned short address, unsigned int tstates, int param)
+{
     
-    if (address >= 16384 && address <= 32767) {
+    if (address >= 16384 && address <= 32767)
+    {
         core->AddContentionTStates(memoryContentionTable[core->GetTStates() % tsPerFrame]);
     }
     
 }
 
-static void coreIOContention(unsigned short address, unsigned int tstates, int param) {
+static void coreIOContention(unsigned short address, unsigned int tstates, int param)
+{
     // NOT USED
 }
 
 #pragma mark - Contention Tables
 
-- (void)buildContentionTable {
+- (void)buildContentionTable
+{
     
-    for (int i = 0; i < tsPerFrame; i++) {
+    for (int i = 0; i < tsPerFrame; i++)
+    {
         
         memoryContentionTable[i] = 0;
         ioContentionTable[i] = 0;
         
         // 14336 Ts is reported by most ZX Spectrum machines while there were a percentage that would
-        // respond to the /INT late report 14335 Ts. We are setting up contention for 14336 Ts
+        // respond to the /INT late report 14335 Ts. We are setting up contention for 14335 Ts
         int ts = i - ((tsTopBorder + tsVerticalBlank) - 1);
 
-        if (ts >= 0 && ts < (int)tsVerticalDisplay) {
+        if (ts >= 0 && ts < (int)tsVerticalDisplay)
+        {
             int perLine = ts % tsPerLine;
             if (perLine < tsHorizontalDisplay) {
                 memoryContentionTable[i] = contentionValues[perLine & 7];
@@ -671,35 +748,40 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
 
 #pragma mark - Load ROM
 
-- (void)loadDefaultROM {
+- (void)loadDefaultROM
+{
     
     NSString *path = [[NSBundle mainBundle] pathForResource:@"48" ofType:@"ROM"];
     NSData *rom = [NSData dataWithContentsOfFile:path];
     
     const char *fileBytes = (const char*)[rom bytes];
     
-    for (int addr = 0; addr < rom.length; addr++) {
+    for (int addr = 0; addr < rom.length; addr++)
+    {
         memory[addr] = fileBytes[addr];
     }
 }
 
 #pragma mark - SnapShot
 
-- (void)loadSnapshotWithPath:(NSString *)path {
+- (void)loadSnapshotWithPath:(NSString *)path
+{
     self.snapshotPath = path;
     event = Snapshot;
 }
 
-- (void)loadSnapshot {
+- (void)loadSnapshot
+{
     
     NSData *data = [NSData dataWithContentsOfFile:self.snapshotPath];
     
     const char *fileBytes = (const char*)[data bytes];
     
-    if (data.length == 49179) {
-        
+    if (data.length == 49179)
+    {
         int snaAddr = 27;
-        for (int i= 16384; i < (48 * 1024) + 16384; i++) {
+        for (int i= 16384; i < (48 * 1024) + 16384; i++)
+        {
             memory[i] = fileBytes[snaAddr++];
         }
         
@@ -735,15 +817,21 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
         core->SetRegister(CZ80Core::eREG_PC, (pc_msb << 8) | pc_lsb);
         core->SetRegister(CZ80Core::eREG_SP, core->GetRegister(CZ80Core::eREG_SP) + 2);
         
+        // Reset the audio buffer
+        [self resetSound];
+
+        // Reset the display variables
         [self startDisplayFrame];
     }
 }
 
 #pragma mark - View Event Protocol Methods
 
-- (void)keyDown:(NSEvent *)theEvent {
+- (void)keyDown:(NSEvent *)theEvent
+{
     
-    switch (theEvent.keyCode) {
+    switch (theEvent.keyCode)
+    {
         case 51: // Backspace
             keyboardMap[0] &= ~0x01; // Shift
             keyboardMap[4] &= ~0x01; // 0
@@ -770,9 +858,10 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
             break;
             
         default:
-            for (NSUInteger i = 0; i < sizeof(keyboardLookup) / sizeof(keyboardLookup[0]); i++) {
-                
-                if (keyboardLookup[i].keyCode == theEvent.keyCode) {
+            for (NSUInteger i = 0; i < sizeof(keyboardLookup) / sizeof(keyboardLookup[0]); i++)
+            {
+                if (keyboardLookup[i].keyCode == theEvent.keyCode)
+                {
                     keyboardMap[keyboardLookup[i].mapEntry] &= ~(1 << keyboardLookup[i].mapBit);
                     break;
                 }
@@ -783,9 +872,11 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
     
 }
 
-- (void)keyUp:(NSEvent *)theEvent {
+- (void)keyUp:(NSEvent *)theEvent
+{
     
-    switch (theEvent.keyCode) {
+    switch (theEvent.keyCode)
+    {
         case 51: // Backspace
             keyboardMap[0] |= 0x01; // Shift
             keyboardMap[4] |= 0x01; // 0
@@ -812,8 +903,8 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
             break;
             
         default:
-            for (NSUInteger i = 0; i < sizeof(keyboardLookup) / sizeof(keyboardLookup[0]); i++) {
-                
+            for (NSUInteger i = 0; i < sizeof(keyboardLookup) / sizeof(keyboardLookup[0]); i++)
+            {
                 if (keyboardLookup[i].keyCode == theEvent.keyCode) {
                     keyboardMap[keyboardLookup[i].mapEntry] |= (1 << keyboardLookup[i].mapBit);
                     break;
@@ -824,9 +915,11 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
     
 }
 
-- (void)flagsChanged:(NSEvent *)theEvent {
+- (void)flagsChanged:(NSEvent *)theEvent
+{
     
-    switch (theEvent.keyCode) {
+    switch (theEvent.keyCode)
+    {
         case 56: // Left Shift
         case 60: // Right Shift
             if (theEvent.modifierFlags & NSShiftKeyMask) {
@@ -848,9 +941,11 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
     
 }
 
-- (void)resetKeyboardMap {
+- (void)resetKeyboardMap
+{
     
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++)
+    {
         keyboardMap[i] = 0xff;
     }
     

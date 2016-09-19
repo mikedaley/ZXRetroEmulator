@@ -25,6 +25,8 @@
 		ED3650491D7B116E00A6383B /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ED3650481D7B116E00A6383B /* QuartzCore.framework */; };
 		ED36504D1D7B21C900A6383B /* EmuApplication.m in Sources */ = {isa = PBXBuildFile; fileRef = ED36504C1D7B21C900A6383B /* EmuApplication.m */; };
 		ED3650511D7B2C0700A6383B /* AudioCore.m in Sources */ = {isa = PBXBuildFile; fileRef = ED3650501D7B2C0700A6383B /* AudioCore.m */; };
+		ED3801531D8ADE4600C9E78B /* AudioQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = ED3801521D8ADE4600C9E78B /* AudioQueue.m */; };
+		ED5A32C21D903DDD00BD2327 /* beep.sna in Resources */ = {isa = PBXBuildFile; fileRef = ED5A32C11D903DDD00BD2327 /* beep.sna */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -62,6 +64,9 @@
 		ED36504C1D7B21C900A6383B /* EmuApplication.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = EmuApplication.m; sourceTree = "<group>"; };
 		ED36504F1D7B2C0700A6383B /* AudioCore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioCore.h; sourceTree = "<group>"; };
 		ED3650501D7B2C0700A6383B /* AudioCore.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AudioCore.m; sourceTree = "<group>"; };
+		ED3801511D8ADE4600C9E78B /* AudioQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioQueue.h; sourceTree = "<group>"; };
+		ED3801521D8ADE4600C9E78B /* AudioQueue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AudioQueue.m; sourceTree = "<group>"; };
+		ED5A32C11D903DDD00BD2327 /* beep.sna */ = {isa = PBXFileReference; lastKnownFileType = file; path = beep.sna; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -122,6 +127,7 @@
 		ED3650201D7AFA7800A6383B /* ROMS */ = {
 			isa = PBXGroup;
 			children = (
+				ED5A32C11D903DDD00BD2327 /* beep.sna */,
 				ED3650271D7AFADA00A6383B /* 48.ROM */,
 			);
 			name = ROMS;
@@ -208,6 +214,8 @@
 			children = (
 				ED36504F1D7B2C0700A6383B /* AudioCore.h */,
 				ED3650501D7B2C0700A6383B /* AudioCore.m */,
+				ED3801511D8ADE4600C9E78B /* AudioQueue.h */,
+				ED3801521D8ADE4600C9E78B /* AudioQueue.m */,
 			);
 			name = "Audio Core";
 			sourceTree = "<group>";
@@ -272,6 +280,7 @@
 				ED3650161D7AFA6D00A6383B /* Assets.xcassets in Resources */,
 				ED3650471D7AFB6B00A6383B /* EmulationViewController.xib in Resources */,
 				ED3650281D7AFADA00A6383B /* 48.ROM in Resources */,
+				ED5A32C21D903DDD00BD2327 /* beep.sna in Resources */,
 				ED3650191D7AFA6D00A6383B /* MainMenu.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -287,6 +296,7 @@
 				ED36503C1D7AFAE400A6383B /* Z80Core_DDOpcodes.cpp in Sources */,
 				ED36504D1D7B21C900A6383B /* EmuApplication.m in Sources */,
 				ED3650391D7AFAE400A6383B /* Z80Core_MainOpcodes.cpp in Sources */,
+				ED3801531D8ADE4600C9E78B /* AudioQueue.m in Sources */,
 				ED36503A1D7AFAE400A6383B /* Z80Core_CBOpcodes.cpp in Sources */,
 				ED3650141D7AFA6D00A6383B /* main.m in Sources */,
 				ED36503E1D7AFAE400A6383B /* Z80Core_DDCB_FDCBOpcodes.cpp in Sources */,
