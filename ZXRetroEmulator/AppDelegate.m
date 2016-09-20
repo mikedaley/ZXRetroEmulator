@@ -24,6 +24,7 @@
 
 @property (assign) NSInteger viewWidth;
 @property (assign) NSInteger viewHeight;
+@property (assign) NSInteger viewScale;
 
 @end
 
@@ -31,30 +32,32 @@
 
 @implementation AppDelegate
 
-- (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
-
+- (void)applicationDidFinishLaunching:(NSNotification *)aNotification
+{
     _viewWidth = 40 + 256 + 40;
     _viewHeight = 40 + 192 + 40;
-    
+    _viewScale = 2.0;
     [self setupViews];
     
     // Setup the machine to be emulated and set it as the delegate for the emaultion view controller. This means view based events such as keyDown,
     // keyUp and flagsChanged will be passed to _machine for processing
     _machine = [[ZXSpectrum48 alloc] initWithEmulationScreenView:_emulationViewController.view];
     _emulationViewController.delegate = _machine;
-    [_machine startExecution];
+    [_machine start];
     
 //    NSString *path = [[NSBundle mainBundle] pathForResource:@"beep" ofType:@"sna"];
 //    [_machine loadSnapshotWithPath:path];
 }
 
-- (void)applicationWillTerminate:(NSNotification *)aNotification {
+- (void)applicationWillTerminate:(NSNotification *)aNotification
+{
     // Insert code here to tear down your application
 }
 
 #pragma mark - View setup
 
-- (void)setupViews {
+- (void)setupViews
+{
     _window.contentView.wantsLayer = YES;
     [_window.contentView addSubview:_emulationViewController.view];
 
@@ -62,8 +65,8 @@
     
     NSDictionary *views = @{ @"emulationDisplayView" : _emulationViewController.view };
     
-    _windowWidthConstraint = [NSLayoutConstraint constraintWithItem:_emulationViewController.view attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeWidth multiplier:1.0 constant:_viewWidth];
-    _windowHeightConstraint = [NSLayoutConstraint constraintWithItem:_emulationViewController.view attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeHeight multiplier:1.0 constant:_viewHeight];
+    _windowWidthConstraint = [NSLayoutConstraint constraintWithItem:_emulationViewController.view attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeWidth multiplier:1.0 constant:_viewWidth * _viewScale];
+    _windowHeightConstraint = [NSLayoutConstraint constraintWithItem:_emulationViewController.view attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeHeight multiplier:1.0 constant:_viewHeight * _viewScale];
     
     [_window.contentView addConstraint:_windowWidthConstraint];
     [_window.contentView addConstraint:_windowHeightConstraint];
@@ -79,10 +82,10 @@
 
 #pragma mark - Menu actions
 
-- (IBAction)animateWindowSize:(id)sender {
-
-    [NSAnimationContext runAnimationGroup:^(NSAnimationContext * _Nonnull context) {
-        
+- (IBAction)animateWindowSize:(id)sender
+{
+    [NSAnimationContext runAnimationGroup:^(NSAnimationContext * _Nonnull context)
+    {
         context.duration = 0.2;
         context.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
         
@@ -91,27 +94,33 @@
         self.windowHeightConstraint.animator.constant = _viewHeight * menuItem.tag / 2.0;
         
     } completionHandler:nil];
-    
 }
 
-- (IBAction)machineReset:(id)sender {
+- (IBAction)machineReset:(id)sender
+{
     [self.machine reset];
 }
 
-- (IBAction)openDocument:(id)sender {
+- (IBAction)openDocument:(id)sender
+{
     NSOpenPanel *openPanel = [NSOpenPanel new];
     openPanel.canChooseDirectories = NO;
     openPanel.allowsMultipleSelection = NO;
     openPanel.allowedFileTypes = @[@"sna"];
-    if ([openPanel runModal] == NSModalResponseOK) {
+    if ([openPanel runModal] == NSModalResponseOK)
+    {
         [self.machine loadSnapshotWithPath:openPanel.URLs[0].path];
     }
 }
 
-- (IBAction)toggleFilter:(id)sender {
-    if (_emulationViewController.view.layer.magnificationFilter == kCAFilterNearest) {
+- (IBAction)toggleFilter:(id)sender
+{
+    if (_emulationViewController.view.layer.magnificationFilter == kCAFilterNearest)
+    {
         _emulationViewController.view.layer.magnificationFilter = kCAFilterLinear;
-    } else {
+    }
+    else
+    {
         _emulationViewController.view.layer.magnificationFilter = kCAFilterNearest;
     }
 }

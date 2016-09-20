@@ -11,16 +11,20 @@
 #import "ZXSpectrum48.h"
 #import "AudioCore.h"
 
+#pragma mark - Private Interface
+
 @interface EmulationViewController ()
 
 @property (weak) AppDelegate *appDelegate;
 
-
 @end
+
+#pragma mark - Implementation 
 
 @implementation EmulationViewController
 
-- (void)viewDidLoad {
+- (void)viewDidLoad
+{
     [super viewDidLoad];
     // Do view setup here.
     
@@ -31,20 +35,26 @@
     
 }
 
-- (void)keyUp:(NSEvent *)theEvent {
-    if ([self.delegate respondsToSelector:@selector(keyUp:)]) {
+- (void)keyUp:(NSEvent *)theEvent
+{
+    if ([self.delegate respondsToSelector:@selector(keyUp:)])
+    {
         [self.delegate keyUp:theEvent];
     }
 }
 
-- (void)keyDown:(NSEvent *)theEvent {
-    if ([self.delegate respondsToSelector:@selector(keyDown:)]) {
+- (void)keyDown:(NSEvent *)theEvent
+{
+    if ([self.delegate respondsToSelector:@selector(keyDown:)])
+    {
         [self.delegate keyDown:theEvent];
     }
 }
 
-- (void)flagsChanged:(NSEvent *)theEvent {
-    if ([self.delegate respondsToSelector:@selector(flagsChanged:)]) {
+- (void)flagsChanged:(NSEvent *)theEvent
+{
+    if ([self.delegate respondsToSelector:@selector(flagsChanged:)])
+    {
         [self.delegate flagsChanged:theEvent];
     }
 }

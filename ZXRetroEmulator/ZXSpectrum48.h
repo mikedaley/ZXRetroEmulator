@@ -22,8 +22,8 @@
 #pragma mark - Methods
 
 - (instancetype)initWithEmulationScreenView:(NSView *)view;
-- (void)startExecution;
-- (void)stopExecution;
+- (void)start;
+- (void)pause;
 - (void)loadSnapshotWithPath:(NSString *)path;
 - (void)reset;
 - (void)doFrame;

@@ -65,6 +65,7 @@
 		ED3650501D7B2C0700A6383B /* AudioCore.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AudioCore.m; sourceTree = "<group>"; };
 		ED3801511D8ADE4600C9E78B /* AudioQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioQueue.h; sourceTree = "<group>"; };
 		ED3801521D8ADE4600C9E78B /* AudioQueue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AudioQueue.m; sourceTree = "<group>"; };
+		ED438AF81D9146440027B295 /* KeyboardMatrix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KeyboardMatrix.h; sourceTree = "<group>"; };
 		ED5A32C11D903DDD00BD2327 /* beep.sna */ = {isa = PBXFileReference; lastKnownFileType = file; path = beep.sna; sourceTree = "<group>"; };
 		ED5A32C41D90652100BD2327 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -194,6 +195,7 @@
 		ED3650261D7AFAC000A6383B /* Machines */ = {
 			isa = PBXGroup;
 			children = (
+				ED438AF81D9146440027B295 /* KeyboardMatrix.h */,
 				ED36503F1D7AFAF000A6383B /* ZXSpectrum48.h */,
 				ED3650401D7AFAF000A6383B /* ZXSpectrum48.mm */,
 			);
