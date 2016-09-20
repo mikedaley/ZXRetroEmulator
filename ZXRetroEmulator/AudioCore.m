@@ -56,12 +56,11 @@ UInt32      formatBytesPerPacket;
 - (instancetype)initWithSampleRate:(int)sampleRate framesPerSecond:(float)fps emulationQueue:queue machine:(ZXSpectrum48 *)machine
 {
     self = [super init];
-    if (self) {
-        
+    if (self)
+    {
         _emulationQueue = queue;
         _queue = [AudioQueue queue];
         _machine = machine;
-        
         samplesPerFrame = sampleRate / fps;
         
         CheckError(NewAUGraph(&_graph), "NewAUGraph");
@@ -177,7 +176,8 @@ static OSStatus renderAudio(void *inRefCon,AudioUnitRenderActionFlags *ioActionF
     // Check if we have used a frames worth of buffer storage.
     if ([audioCore.queue used] < (samplesPerFrame << 1))
     {
-        dispatch_async(audioCore.emulationQueue, ^{
+        dispatch_async(audioCore.emulationQueue, ^
+        {
             [audioCore.machine doFrame];
         });
         
@@ -197,18 +197,23 @@ static OSStatus renderAudio(void *inRefCon,AudioUnitRenderActionFlags *ioActionF
 // Routine to help detect and display OSStatus errors generated when using the Core Audio API
 // It works out of the error is a C string to be displayed or an integer value. This allows them
 // to be logged in a consistent manor.
-// Taken from Learning Core Audio by Chris Adams and Kevin Avila
-static void CheckError(OSStatus error, const char *operation) {
-    if (error == noErr) {
+// Taken from "Learning Core Audio" by Chris Adams and Kevin Avila
+static void CheckError(OSStatus error, const char *operation)
+{
+    if (error == noErr)
+    {
         return;
     }
     
     char str[20];
     *(UInt32 *) (str + 1) = CFSwapInt32HostToBig(error);
-    if (isprint(str[1]) && isprint(str[2]) && isprint(str[3]) && isprint(str[4])) {
+    if (isprint(str[1]) && isprint(str[2]) && isprint(str[3]) && isprint(str[4]))
+    {
         str[0] = str[5] = '\'';
         str[6] = '\0';
-    } else {
+    }
+    else
+    {
         sprintf(str, "%d", (int)error);
     }
     
