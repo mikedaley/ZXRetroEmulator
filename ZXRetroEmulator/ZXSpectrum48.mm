@@ -488,7 +488,6 @@ KeyboardEntry keyboardLookup[] = {
             // Loop through the current pixel byte drawing pixels into the screen image buffer
             for (int b = 0x80; b; b >>= 1)
             {
-                
                 if (pixelByte & b) {
                     emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[ink].r;
                     emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[ink].g;

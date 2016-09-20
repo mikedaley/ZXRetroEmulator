@@ -16,10 +16,12 @@
 
 @interface AudioQueue ()
 
-@property (assign) int16_t *buffer;
+@property (assign) int16_t *queueBuffer;
 @property (assign) int read;
 @property (assign) int written;
 @property (assign) int capacity;
+
+- (void)setup;
 
 @end
 
@@ -27,9 +29,7 @@
 
 - (void)dealloc
 {
-    
-    free(_buffer);
-
+    free(_queueBuffer);
 }
 
 + (AudioQueue *)queue
@@ -42,15 +42,15 @@
 - (void)setup
 {
     _capacity = 1 << kExponent;
-    _buffer = malloc(_capacity << 1);
+    _queueBuffer = malloc(_capacity << 1);
     _read = 0;
     _written = 0;
 }
 
-- (int)write:(int16_t *)data count:(uint)bytes
+- (int)write:(int16_t *)buffer count:(uint)count
 {
     
-    if (!data) {
+    if (!count) {
         return 0;
     }
     
@@ -59,30 +59,30 @@
     
     t = kSpace;
     
-    if (bytes > t)
+    if (count > t)
     {
-        bytes = t;
+        count = t;
     } else {
-        t = bytes;
+        t = count;
     }
     
     i = _written;
     
-    if ((i + bytes) > _capacity)
+    if ((i + count) > _capacity)
     {
-        memcpy(_buffer + i, data, (_capacity - i) << 1);
-        data += _capacity - i;
-        bytes -= _capacity - i;
+        memcpy(_queueBuffer + i, buffer, (_capacity - i) << 1);
+        buffer += _capacity - i;
+        count -= _capacity - i;
         i = 0;
     }
     
-    memcpy(_buffer + i, data, bytes << 1);
-    _written = i + bytes;
+    memcpy(_queueBuffer + i, buffer, count << 1);
+    _written = i + count;
     
     return t;
 }
 
-- (int)read:(int16_t *)data count:(uint)bytes
+- (int)read:(int16_t *)buffer count:(uint)count
 {
     
     int t;
@@ -90,25 +90,25 @@
     
     t = kUsed;
     
-    if (bytes > t)
+    if (count > t)
     {
-        bytes = t;
+        count = t;
     } else {
-        t = bytes;
+        t = count;
     }
     
     i = _read;
     
-    if ((i + bytes) > _capacity)
+    if ((i + count) > _capacity)
     {
-        memcpy(data, _buffer + i, (_capacity - i) << 1);
-        data += _capacity - i;
-        bytes -= _capacity - i;
+        memcpy(buffer, _queueBuffer + i, (_capacity - i) << 1);
+        buffer += _capacity - i;
+        count -= _capacity - i;
         i = 0;
     }
     
-    memcpy(data, _buffer + i, bytes << 1);
-    _read = i + bytes;
+    memcpy(buffer, _queueBuffer + i, count << 1);
+    _read = i + count;
         
     return t;
 }
