@@ -415,7 +415,8 @@ KeyboardEntry keyboardLookup[] = {
     // Loop for as many tStates that have just been used by the previous CPU instruction
     for(int i = 0; i < numberTs; i++) {
         
-        double beeperLevel = soundLevel[ audioEar << 1 | audioMic];
+        // Grab the current state of the audio ear output
+        double beeperLevel = audioEar;
         
         // If we have done more cycles now that the audio step counter generate a sample
         if (audioTsCounter++ >= audioTsStepCounter)
@@ -429,8 +430,8 @@ KeyboardEntry keyboardLookup[] = {
             audioBeeperValue += (beeperLevel * delta1);
             
             // Load the buffer with the sample for both left and right channels
-            _audioBuffer[ audioBufferIndex++ ] = (int16_t)(audioBeeperValue * 256);
-            _audioBuffer[ audioBufferIndex++ ] = (int16_t)(audioBeeperValue * 256);
+            _audioBuffer[ audioBufferIndex++ ] = (int16_t)(audioBeeperValue * 384);
+            _audioBuffer[ audioBufferIndex++ ] = (int16_t)(audioBeeperValue * 384);
             
             // Quantize for the next sample
             audioBeeperValue = (beeperLevel * delta2);
@@ -570,6 +571,8 @@ KeyboardEntry keyboardLookup[] = {
     
     // Reset audio variables
     audioBufferIndex = 0;
+    audioTsCounter = 0;
+    audioTsStepCounter = 0;
 }
 
 #pragma mark - Memory & IO methods
