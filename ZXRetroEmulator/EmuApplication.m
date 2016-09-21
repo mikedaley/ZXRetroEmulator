@@ -10,13 +10,15 @@
 
 @implementation EmuApplication
 
-- (void)sendEvent:(NSEvent *)theEvent {
-    
-    if (theEvent.type == NSKeyUp && theEvent.modifierFlags & NSCommandKeyMask) {
-        [_keyWindow sendEvent:theEvent];
-    } else {
-        [super sendEvent:theEvent];
-    }
+- (void)sendEvent:(NSEvent *)theEvent
+{
+//    if (theEvent.type == NSKeyUp && theEvent.modifierFlags & NSCommandKeyMask)
+//    {
+//        [_keyWindow sendEvent:theEvent];
+//    }
+//
+    [super sendEvent:theEvent];
+
 }
 
 @end

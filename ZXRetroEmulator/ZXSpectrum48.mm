@@ -30,6 +30,9 @@
 
 #define kTstatesPerFrame 69888
 
+#define kScreenBorder 1
+#define kScreenPaper 2
+
 #pragma mark - Structures 
 
 // Structure of pixel data used in the emulation display buffer
@@ -121,6 +124,8 @@ int             pixelBeamY;
 int             pixelAddress;
 int             attrAddress;
 
+uint8           screenTsTable[312][224];
+
 //*** Audio
 double          audioBeeperValue;
 int             audioEar;
@@ -205,18 +210,18 @@ unsigned char keyboardMap[8];
         tsVerticalDisplay = pxVerticalDisplay * tsPerLine;
         tsHorizontalDisplay = 128;
         tsPerChar = 4;
-        tsToOrigin = 14336;
+        tsToOrigin = 14335;
         
         emuShouldInterpolate = YES;
         emuDisplayBitsPerPx = 32;
         emuDisplayBitsPerComponent = 8;
         emuDisplayBytesPerPx = 4;
         
-        emuLeftBorderChars = 5;
-        emuRightBorderChars = 5;
+        emuLeftBorderChars = 4;
+        emuRightBorderChars = 8;
         
-        emuBottomBorderLines = emuLeftBorderChars * 8;
-        emuTopBorderLines = emuLeftBorderChars * 8;
+        emuBottomBorderLines = 7 * 8;
+        emuTopBorderLines = 7 * 8;
         
         emuBeamXMax = (32 + emuRightBorderChars);
         emuBeamYMax = (192 + emuBottomBorderLines);
@@ -242,6 +247,7 @@ unsigned char keyboardMap[8];
         
         [self resetSound];
         [self buildContentionTable];
+        [self buildScreenTstateTable];
         [self resetKeyboardMap];
         [self loadDefaultROM];
         
@@ -296,51 +302,55 @@ unsigned char keyboardMap[8];
 - (int)step
 {
     int tsCPU = core->Execute(0);
-    [self updateSreenWithTStates];
+    [self updateSreenWithTStates:tsCPU];
     [self updateAudioWithTStates:tsCPU];
+    
+    if (core->GetTStates() >= tsPerFrame )
+    {
+        core->ResetTStates( tsPerFrame );
+        core->SignalInterrupt();
+        
+        [self generateImage];
+        
+        // Update the UI image with the new emulator image
+        dispatch_async(dispatch_get_main_queue(), ^
+        {
+           self.emulationView.layer.contents = self.imageRef;
+        });
+
+        // Frame counter used to control the flash cycle
+        frameCounter++;
+    }
     
     return tsCPU;
 }
 
 - (void)doFrame
 {
-    switch (event)
-    {
-        case None:
-            break;
-            
-        case Reset:
-            event = None;
-            [self reset];
-            break;
-            
-        case Snapshot:
-            [self reset];
-            [self loadSnapshot];
-            event = None;
-            break;
-            
-        default:
-            break;
-    }
-    
     dispatch_async(self.emulationQueue, ^
     {
+        switch (event)
+        {
+            case None:
+                break;
+                
+            case Reset:
+                event = None;
+                [self reset];
+                break;
+                
+            case Snapshot:
+                [self reset];
+                [self loadSnapshot];
+                event = None;
+                break;
+                
+            default:
+                break;
+        }
+
         [self startDisplayFrame];
         [self generateFrame];
-        [self generateImage];
-
-        // Update the UI image with the new emulator image
-        dispatch_async(dispatch_get_main_queue(), ^
-        {
-            self.emulationView.layer.contents = self.imageRef;
-        });
-
-        core->ResetTStates( core->GetTStates() );
-        core->SignalInterrupt();
-        
-        // Frame counter used to control the flash cycle
-        frameCounter++;
     });
 }
 
@@ -399,8 +409,19 @@ unsigned char keyboardMap[8];
     audioTsStepCounter = 0;
 }
 
-- (void)updateSreenWithTStates
+- (void)updateSreenWithTStates:(int)numberTs
 {
+    
+//    for (int ts = 0; ts < numberTs; ts++)
+//    {
+//        
+//        
+//        
+//        
+//    }
+//    
+//    
+    
     
     // Keep drawing 8x1 screen chucks based on the number of Ts in the current frame
     while (emuDisplayTs <= core->GetTStates() && emuDisplayTs != -1)
@@ -570,18 +591,24 @@ static unsigned char coreIORead(unsigned short address, int tstates)
         }
     }
     
+    int result = 0xff;
+    
+    // Check to see if any keys have been pressed
     if ((address & 0xff) == 0xfe)
     {
         for (int i = 0; i < 8; i++)
         {
-            if ((address & (0x100 << i)) == 0)
+            if (!(address & (0x100 << i)))
             {
-                return keyboardMap[i] & 0xff;
+                result &= keyboardMap[i];
             }
         }
     }
     
-    return 0xff;
+    // Mix any keypress data with the current audio ear value
+    result = audioEar ? result | 0x40 : result & 0xbf;
+    NSLog(@"%i", result);
+    return result;
 }
 
 static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
@@ -679,6 +706,48 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
     }
 }
 
+#pragma mark - Screen T-State table
+
+- (void)buildScreenTstateTable
+{
+    for (int i = 0; i < 312; i++)
+    {
+        for (int j = 0; j < 224; j++)
+        {
+            screenTsTable[i][j] = 0;
+            
+            if (i >= 15 && i < 303 && j >= 224 - 32 && j < 224)
+            {
+                screenTsTable[i][j] = kScreenBorder;
+            }
+            else
+            {
+                if (i >= 16 && i < 304)
+                {
+                    if (j < 128)
+                    {
+                        if (i < 64 || i >= 256)
+                        {
+                            screenTsTable[i][j] = kScreenBorder;
+                        }
+                        else
+                        {
+                            screenTsTable[i][j] = kScreenPaper;
+                        }
+                    }
+                    else
+                    {
+                        if (j < 160)
+                        {
+                            screenTsTable[i][j] = kScreenBorder;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #pragma mark - Load ROM
 
 - (void)loadDefaultROM
@@ -760,121 +829,143 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
 
 - (void)keyDown:(NSEvent *)theEvent
 {
-    
-    switch (theEvent.keyCode)
+    if (!theEvent.isARepeat && !(theEvent.modifierFlags & NSCommandKeyMask) && theEvent.charactersIgnoringModifiers.length)
     {
-        case 51: // Backspace
-            keyboardMap[0] &= ~0x01; // Shift
-            keyboardMap[4] &= ~0x01; // 0
-            break;
-            
-        case 126: // Arrow up
-            keyboardMap[0] &= ~0x01; // Shift
-            keyboardMap[4] &= ~0x08; // 7
-            break;
-            
-        case 125: // Arrow down
-            keyboardMap[0] &= ~0x01; // Shift
-            keyboardMap[4] &= ~0x10; // 6
-            break;
-            
-        case 123: // Arrow left
-            keyboardMap[0] &= ~0x01; // Shift
-            keyboardMap[3] &= ~0x10; // 5
-            break;
-            
-        case 124: // Arrow right
-            keyboardMap[0] &= ~0x01; // Shift
-            keyboardMap[4] &= ~0x04; // 8
-            break;
-            
-        default:
-            for (NSUInteger i = 0; i < sizeof(keyboardLookup) / sizeof(keyboardLookup[0]); i++)
-            {
-                if (keyboardLookup[i].keyCode == theEvent.keyCode)
+        NSLog(@"KeyDown: %i", theEvent.keyCode);
+        switch (theEvent.keyCode)
+        {
+            case 51: // Backspace
+                keyboardMap[0] &= ~0x01; // Shift
+                keyboardMap[4] &= ~0x01; // 0
+                break;
+                
+            case 126: // Arrow up
+                keyboardMap[0] &= ~0x01; // Shift
+                keyboardMap[4] &= ~0x08; // 7
+                break;
+                
+            case 125: // Arrow down
+                keyboardMap[0] &= ~0x01; // Shift
+                keyboardMap[4] &= ~0x10; // 6
+                break;
+                
+            case 123: // Arrow left
+                keyboardMap[0] &= ~0x01; // Shift
+                keyboardMap[3] &= ~0x10; // 5
+                break;
+                
+            case 124: // Arrow right
+                keyboardMap[0] &= ~0x01; // Shift
+                keyboardMap[4] &= ~0x04; // 8
+                break;
+                
+            default:
+                for (NSUInteger i = 0; i < sizeof(keyboardLookup) / sizeof(keyboardLookup[0]); i++)
                 {
-                    keyboardMap[keyboardLookup[i].mapEntry] &= ~(1 << keyboardLookup[i].mapBit);
-                    break;
+                    if (keyboardLookup[i].keyCode == theEvent.keyCode)
+                    {
+                        keyboardMap[keyboardLookup[i].mapEntry] &= ~(1 << keyboardLookup[i].mapBit);
+                        break;
+                    }
                 }
-            }
-            break;
+                break;
+        }
     }
 }
 
 - (void)keyUp:(NSEvent *)theEvent
 {
-    
-    switch (theEvent.keyCode)
+    if (!theEvent.isARepeat && !(theEvent.modifierFlags & NSCommandKeyMask) && theEvent.charactersIgnoringModifiers.length)
     {
-        case 51: // Backspace
-            keyboardMap[0] |= 0x01; // Shift
-            keyboardMap[4] |= 0x01; // 0
-            break;
-            
-        case 126: // Arrow up
-            keyboardMap[0] |= 0x01; // Shift
-            keyboardMap[4] |= 0x08; // 7
-            break;
-            
-        case 125: // Arrow down
-            keyboardMap[0] |= 0x01; // Shift
-            keyboardMap[4] |= 0x10; // 6
-            break;
-            
-        case 123: // Arrow left
-            keyboardMap[0] |= 0x01; // Shift
-            keyboardMap[3] |= 0x10; // 5
-            break;
-            
-        case 124: // Arrow right
-            keyboardMap[0] |= 0x01; // Shift
-            keyboardMap[4] |= 0x04; // 8
-            break;
-            
-        default:
-            for (NSUInteger i = 0; i < sizeof(keyboardLookup) / sizeof(keyboardLookup[0]); i++)
-            {
-                if (keyboardLookup[i].keyCode == theEvent.keyCode)
+        NSLog(@"KeyUp: %i", theEvent.keyCode);
+        switch (theEvent.keyCode)
+        {
+            case 51: // Backspace
+                keyboardMap[0] |= 0x01; // Shift
+                keyboardMap[4] |= 0x01; // 0
+                break;
+                
+            case 126: // Arrow up
+                keyboardMap[0] |= 0x01; // Shift
+                keyboardMap[4] |= 0x08; // 7
+                break;
+                
+            case 125: // Arrow down
+                keyboardMap[0] |= 0x01; // Shift
+                keyboardMap[4] |= 0x10; // 6
+                break;
+                
+            case 123: // Arrow left
+                keyboardMap[0] |= 0x01; // Shift
+                keyboardMap[3] |= 0x10; // 5
+                break;
+                
+            case 124: // Arrow right
+                keyboardMap[0] |= 0x01; // Shift
+                keyboardMap[4] |= 0x04; // 8
+                break;
+                
+            default:
+                for (NSUInteger i = 0; i < sizeof(keyboardLookup) / sizeof(keyboardLookup[0]); i++)
                 {
-                    keyboardMap[keyboardLookup[i].mapEntry] |= (1 << keyboardLookup[i].mapBit);
-                    break;
+                    if (keyboardLookup[i].keyCode == theEvent.keyCode)
+                    {
+                        keyboardMap[keyboardLookup[i].mapEntry] |= (1 << keyboardLookup[i].mapBit);
+                        break;
+                    }
                 }
-            }
-            break;
+                break;
+        }
     }
-    
 }
 
 - (void)flagsChanged:(NSEvent *)theEvent
 {
-    
-    switch (theEvent.keyCode)
+    NSLog(@"FlagsChanged: %i", theEvent.keyCode);
+    if (!(theEvent.modifierFlags & NSCommandKeyMask))
     {
-        case 56: // Left Shift
-        case 60: // Right Shift
-            if (theEvent.modifierFlags & NSShiftKeyMask)
-            {
-                keyboardMap[0] &= ~0x01;
-            }
-            else
-            {
-                keyboardMap[0] |= 0x01;
-            }
-            break;
-        case 59: // Control
-            if (theEvent.modifierFlags & NSControlKeyMask)
-            {
-                keyboardMap[7] &= ~0x02;
-            }
-            else
-            {
-                keyboardMap[7] |= 0x02;
-            }
-            
-        default:
-            break;
+        switch (theEvent.keyCode)
+        {
+            case 58: // Alt Right - This puts the keyboard into extended mode in a single keypress
+            case 61: // Alt Left
+                if (theEvent.modifierFlags & NSAlternateKeyMask)
+                {
+                    keyboardMap[0] &= ~0x01;
+                    keyboardMap[7] &= ~0x02;
+                }
+                else
+                {
+                    keyboardMap[0] |= 0x01;
+                    keyboardMap[7] |= 0x02;
+                }
+                break;
+                
+            case 56: // Left Shift
+            case 60: // Right Shift
+                if (theEvent.modifierFlags & NSShiftKeyMask)
+                {
+                    keyboardMap[0] &= ~0x01;
+                }
+                else
+                {
+                    keyboardMap[0] |= 0x01;
+                }
+                break;
+                
+            case 59: // Control
+                if (theEvent.modifierFlags & NSControlKeyMask)
+                {
+                    keyboardMap[7] &= ~0x02;
+                }
+                else
+                {
+                    keyboardMap[7] |= 0x02;
+                }
+                
+            default:
+                break;
+        }
     }
-    
 }
 
 - (void)resetKeyboardMap
