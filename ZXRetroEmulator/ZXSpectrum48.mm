@@ -591,23 +591,27 @@ static unsigned char coreIORead(unsigned short address, int tstates)
         }
     }
     
+    // If the address does not belong to the ULA then return 0.
+    // TODO: Implement floating bus
+    if (address & 0x01)
+    {
+        return 0;
+    }
+    
     int result = 0xff;
     
     // Check to see if any keys have been pressed
-    if ((address & 0xff) == 0xfe)
+    for (int i = 0; i < 8; i++)
     {
-        for (int i = 0; i < 8; i++)
+        if (!(address & (0x100 << i)))
         {
-            if (!(address & (0x100 << i)))
-            {
-                result &= keyboardMap[i];
-            }
+            result &= keyboardMap[i];
         }
     }
     
     // Mix any keypress data with the current audio ear value
     result = audioEar ? result | 0x40 : result & 0xbf;
-    NSLog(@"%i", result);
+    
     return result;
 }
 
@@ -820,6 +824,8 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
         // Reset the audio buffer
         [self resetSound];
 
+        [self resetKeyboardMap];
+        
         // Reset the display variables
         [self startDisplayFrame];
     }
@@ -829,9 +835,8 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
 
 - (void)keyDown:(NSEvent *)theEvent
 {
-    if (!theEvent.isARepeat && !(theEvent.modifierFlags & NSCommandKeyMask) && theEvent.charactersIgnoringModifiers.length)
+    if (!theEvent.isARepeat && !(theEvent.modifierFlags & NSCommandKeyMask))
     {
-        NSLog(@"KeyDown: %i", theEvent.keyCode);
         switch (theEvent.keyCode)
         {
             case 51: // Backspace
@@ -875,9 +880,8 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
 
 - (void)keyUp:(NSEvent *)theEvent
 {
-    if (!theEvent.isARepeat && !(theEvent.modifierFlags & NSCommandKeyMask) && theEvent.charactersIgnoringModifiers.length)
+    if (!theEvent.isARepeat && !(theEvent.modifierFlags & NSCommandKeyMask))
     {
-        NSLog(@"KeyUp: %i", theEvent.keyCode);
         switch (theEvent.keyCode)
         {
             case 51: // Backspace
@@ -921,7 +925,6 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
 
 - (void)flagsChanged:(NSEvent *)theEvent
 {
-    NSLog(@"FlagsChanged: %i", theEvent.keyCode);
     if (!(theEvent.modifierFlags & NSCommandKeyMask))
     {
         switch (theEvent.keyCode)

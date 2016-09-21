@@ -103,14 +103,17 @@
 
 - (IBAction)openDocument:(id)sender
 {
-    NSOpenPanel *openPanel = [NSOpenPanel new];
-    openPanel.canChooseDirectories = NO;
-    openPanel.allowsMultipleSelection = NO;
-    openPanel.allowedFileTypes = @[@"sna"];
-    if ([openPanel runModal] == NSModalResponseOK)
+    dispatch_async(dispatch_get_main_queue(), ^
     {
-        [self.machine loadSnapshotWithPath:openPanel.URLs[0].path];
-    }
+        NSOpenPanel *openPanel = [NSOpenPanel new];
+        openPanel.canChooseDirectories = NO;
+        openPanel.allowsMultipleSelection = NO;
+        openPanel.allowedFileTypes = @[@"sna"];
+        if ([openPanel runModal] == NSModalResponseOK)
+        {
+            [self.machine loadSnapshotWithPath:openPanel.URLs[0].path];
+        }        
+    });
 }
 
 - (IBAction)toggleFilter:(id)sender
