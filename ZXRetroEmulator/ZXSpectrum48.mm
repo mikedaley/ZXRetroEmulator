@@ -21,7 +21,7 @@
 @property (strong) dispatch_queue_t emulationQueue;
 @property (strong) dispatch_source_t emulationTimer;
 @property (assign) CGColorSpaceRef colourSpace;
-@property (strong) id imageRef;
+@property (nonatomic, strong) id imageRef;
 @property (strong) NSString *snapshotPath;
 
 @end
@@ -32,6 +32,10 @@
 
 #define kScreenBorder 1
 #define kScreenPaper 2
+
+#define kBitmapAddress 16384
+#define kBitmapSize 6144
+#define kAttributeAddress kBitmapAddress + kBitmapSize
 
 #pragma mark - Structures 
 
@@ -56,6 +60,9 @@ unsigned char memory[64 * 1024];
 unsigned char   contentionValues[8] = {6, 5, 4, 3, 2, 1, 0, 0};
 unsigned char   memoryContentionTable[kTstatesPerFrame];
 unsigned char   ioContentionTable[kTstatesPerFrame];
+
+// Floating bus
+unsigned char   floatingBusTable[8] = {0, 0, 1, 2, 1, 2, 0, 0};
 
 // Machine specific tState values
 int             tsPerFrame;
@@ -124,7 +131,8 @@ int             pixelBeamY;
 int             pixelAddress;
 int             attrAddress;
 
-uint8           screenTsTable[312][224];
+uint16          emuTsLine[192];
+int             emuScreenLine;
 
 //*** Audio
 double          audioBeeperValue;
@@ -217,17 +225,18 @@ unsigned char keyboardMap[8];
         emuDisplayBitsPerComponent = 8;
         emuDisplayBytesPerPx = 4;
         
-        emuLeftBorderChars = 4;
-        emuRightBorderChars = 8;
+        emuLeftBorderChars = 40 / 8;
+        emuRightBorderChars = 40 / 8;
         
-        emuBottomBorderLines = 7 * 8;
-        emuTopBorderLines = 7 * 8;
+        emuBottomBorderLines = 40;
+        emuTopBorderLines = 40;
         
         emuBeamXMax = (32 + emuRightBorderChars);
         emuBeamYMax = (192 + emuBottomBorderLines);
 
         emuDisplayPxWidth = 256 + 8 * (emuLeftBorderChars + emuRightBorderChars);
         emuDisplayPxHeight = 192 + emuTopBorderLines + emuBottomBorderLines;
+        
         emuDisplayTsOffset = 4;
 
         [self startDisplayFrame];
@@ -247,7 +256,6 @@ unsigned char keyboardMap[8];
         
         [self resetSound];
         [self buildContentionTable];
-        [self buildScreenTstateTable];
         [self resetKeyboardMap];
         [self loadDefaultROM];
         
@@ -402,6 +410,7 @@ unsigned char keyboardMap[8];
     emuDisplayTs = tsToOrigin - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar) - emuDisplayTsOffset;
     emuCurrentLineStartTs = emuDisplayTs;
     emuDisplayBufferIndex = 0;
+    emuScreenLine = 0;
     
     // Reset audio variables
     audioBufferIndex = 0;
@@ -411,23 +420,11 @@ unsigned char keyboardMap[8];
 
 - (void)updateSreenWithTStates:(int)numberTs
 {
-    
-//    for (int ts = 0; ts < numberTs; ts++)
-//    {
-//        
-//        
-//        
-//        
-//    }
-//    
-//    
-    
-    
     // Keep drawing 8x1 screen chucks based on the number of Ts in the current frame
     while (emuDisplayTs <= core->GetTStates() && emuDisplayTs != -1)
     {
         // Draw the borders
-        if (pixelBeamY < 0 || pixelBeamY >= 192 || pixelBeamX < 0 || pixelBeamX >= 32)
+        if (pixelBeamY < 0 || pixelBeamY >= pxVerticalDisplay || pixelBeamX < 0 || pixelBeamX >= 32)
         {
             for (int i = 0; i < 8; i ++)
             {
@@ -483,16 +480,15 @@ unsigned char keyboardMap[8];
         }
         else
         {
-            
             // Reached the right edge of the screen so reset the X beam and drop down one line
             pixelBeamX = -emuLeftBorderChars;
             pixelBeamY++;
             
             // If the new line is within the bitmap screen update the pixel and attrubute line addresses
-            if (pixelBeamY >= 0 && pixelBeamY < 192)
+            if (pixelBeamY >= 0 && pixelBeamY < pxVerticalDisplay)
             {
-                pixelAddress = 16384 | ( (pixelBeamY & 0xc0) << 5 ) | ( (pixelBeamY & 0x07) << 8 ) | ( (pixelBeamY & 0x38) << 2 );
-                attrAddress = 16384 | 0x1800 | ( (pixelBeamY & 0xf8) << 2 );
+                pixelAddress = kBitmapAddress | ( (pixelBeamY & 0xc0) << 5 ) | ( (pixelBeamY & 0x07) << 8 ) | ( (pixelBeamY & 0x38) << 2 );
+                attrAddress = kAttributeAddress | ( (pixelBeamY & 0xf8) << 2 );
             }
             
             // If we are not past the bottom of the screen then update the drawing Ts with an entire line
@@ -591,13 +587,19 @@ static unsigned char coreIORead(unsigned short address, int tstates)
         }
     }
     
-    // If the address does not belong to the ULA then return 0.
-    // TODO: Implement floating bus
+    // If the address does not belong to the ULA then return the floating bus value
     if (address & 0x01)
     {
-        return 0;
+        // TODO: Add Kemptston joystick support. Until then return 0
+        if ((address & 0xff) == 0x1f)
+        {
+            return 0x0;
+        }
+        
+        return floatingBus();
     }
     
+    // Default return value
     int result = 0xff;
     
     // Check to see if any keys have been pressed
@@ -608,9 +610,6 @@ static unsigned char coreIORead(unsigned short address, int tstates)
             result &= keyboardMap[i];
         }
     }
-    
-    // Mix any keypress data with the current audio ear value
-    result = audioEar ? result | 0x40 : result & 0xbf;
     
     return result;
 }
@@ -664,6 +663,10 @@ static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
         }
     }
 
+    // Bit  7   6   5   4   3   2   1   0
+    //    +---+---+---+---+---+-----------+
+    //    |   |   |   | E | M |  BORDER   |
+    //    +---+---+---+---+---+-----------+
     if ((address & 0xff) == 0xfe)
     {
         borderColour = data & 0x07;
@@ -689,6 +692,18 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
 
 - (void)buildContentionTable
 {
+    // Build an address lookup table for the start of each line in display memory
+    for(int i = 0; i < 3; i++)
+    {
+        for(int j = 0; j < 8; j++)
+        {
+            for(int k = 0; k < 8; k++)
+            {
+                emuTsLine[(i << 6) + (j << 3) + k] = (i << 11) + (j << 5) + (k << 8);
+            }
+        }
+    }
+    
     for (int i = 0; i < tsPerFrame; i++)
     {
         memoryContentionTable[i] = 0;
@@ -710,46 +725,41 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
     }
 }
 
-#pragma mark - Screen T-State table
+#pragma mark - Floating Bus
 
-- (void)buildScreenTstateTable
+static unsigned char floatingBus()
 {
-    for (int i = 0; i < 312; i++)
+    // Calculate the current scan line and tState within that scan line
+    int currentTs = core->GetTStates();
+    int line = (currentTs / tsPerLine);
+    int t = ((currentTs - 1) % tsPerLine);
+
+    // If the line and tState are within the paper of the screen then grab the
+    // pixel of attribute value
+    if (line >= (pxTopBorder + pxVerticalBlank) && line < (pxVerticalDisplay + pxTopBorder + pxVerticalBlank) && t < tsHorizontalDisplay)
     {
-        for (int j = 0; j < 224; j++)
+        // Use the floatingBusTable to decide if a pixel or attribute value should be grabbed. The table contains
+        // 8 entries
+        uint i = floatingBusTable[ t & 0x07 ];
+        
+        // Calculate where in memory the values are to be taken from
+        int y = line - (pxTopBorder + pxVerticalBlank);
+        int x = t >> 2;
+        
+        // Return pixel data on the bus
+        if (i == 1)
         {
-            screenTsTable[i][j] = 0;
-            
-            if (i >= 15 && i < 303 && j >= 224 - 32 && j < 224)
-            {
-                screenTsTable[i][j] = kScreenBorder;
-            }
-            else
-            {
-                if (i >= 16 && i < 304)
-                {
-                    if (j < 128)
-                    {
-                        if (i < 64 || i >= 256)
-                        {
-                            screenTsTable[i][j] = kScreenBorder;
-                        }
-                        else
-                        {
-                            screenTsTable[i][j] = kScreenPaper;
-                        }
-                    }
-                    else
-                    {
-                        if (j < 160)
-                        {
-                            screenTsTable[i][j] = kScreenBorder;
-                        }
-                    }
-                }
-            }
+            return memory[kBitmapAddress + emuTsLine[y] + x];
+        }
+        
+        // Return attribute data on the bus
+        if (i == 2)
+        {
+            return memory[kAttributeAddress + ((y >> 3) << 5) + x];
         }
     }
+    
+    return 0xff;
 }
 
 #pragma mark - Load ROM

@@ -34,8 +34,8 @@
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
-    _viewWidth = 32 + 256 + 64;
-    _viewHeight = 56 + 192 + 56;
+    _viewWidth = 40 + 256 + 40;
+    _viewHeight = 40 + 192 + 40;
     _viewScale = 2.0;
     [self setupViews];
     
@@ -45,8 +45,8 @@
     _emulationViewController.delegate = _machine;
     [_machine start];
     
-//    NSString *path = [[NSBundle mainBundle] pathForResource:@"beep" ofType:@"sna"];
-//    [_machine loadSnapshotWithPath:path];
+    NSString *path = [[NSBundle mainBundle] pathForResource:@"test1" ofType:@"sna"];
+    [_machine loadSnapshotWithPath:path];
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification
@@ -86,7 +86,7 @@
 {
     [NSAnimationContext runAnimationGroup:^(NSAnimationContext * _Nonnull context)
     {
-        context.duration = 0.2;
+        context.duration = 0.25;
         context.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
         
         NSMenuItem *menuItem = sender;
@@ -103,17 +103,14 @@
 
 - (IBAction)openDocument:(id)sender
 {
-    dispatch_async(dispatch_get_main_queue(), ^
+    NSOpenPanel *openPanel = [NSOpenPanel new];
+    openPanel.canChooseDirectories = NO;
+    openPanel.allowsMultipleSelection = NO;
+    openPanel.allowedFileTypes = @[@"sna"];
+    if ([openPanel runModal] == NSModalResponseOK)
     {
-        NSOpenPanel *openPanel = [NSOpenPanel new];
-        openPanel.canChooseDirectories = NO;
-        openPanel.allowsMultipleSelection = NO;
-        openPanel.allowedFileTypes = @[@"sna"];
-        if ([openPanel runModal] == NSModalResponseOK)
-        {
-            [self.machine loadSnapshotWithPath:openPanel.URLs[0].path];
-        }        
-    });
+        [self.machine loadSnapshotWithPath:openPanel.URLs[0].path];
+    }        
 }
 
 - (IBAction)toggleFilter:(id)sender

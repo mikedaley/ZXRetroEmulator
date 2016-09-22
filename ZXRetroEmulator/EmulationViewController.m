@@ -26,13 +26,11 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    // Do view setup here.
     
     self.view.wantsLayer = YES;
     self.view.layer.magnificationFilter = kCAFilterNearest;
     
     _appDelegate = (AppDelegate *)[NSApplication sharedApplication].delegate;
-    
 }
 
 - (void)keyUp:(NSEvent *)theEvent
@@ -64,7 +62,6 @@
 - (IBAction)highPassFilterChanged:(id)sender
 {
     self.appDelegate.machine.audioCore.highPassFilter = [sender floatValue];
-    
 }
 
 - (IBAction)lowPassFilterChanged:(id)sender

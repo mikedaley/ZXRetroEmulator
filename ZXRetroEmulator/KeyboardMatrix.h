@@ -9,6 +9,13 @@
 #ifndef KeyboardMatrix_h
 #define KeyboardMatrix_h
 
+/**
+    0xfefe  SHIFT, Z, X, C, V            0xeffe  0, 9, 8, 7, 6
+    0xfdfe  A, S, D, F, G                0xdffe  P, O, I, U, Y
+    0xfbfe  Q, W, E, R, T                0xbffe  ENTER, L, K, J, H
+    0xf7fe  1, 2, 3, 4, 5                0x7ffe  SPACE, SYM SHFT, M, N, B
+ */
+
 // Keyboard data structure
 struct KeyboardEntry {
     int keyCode;
