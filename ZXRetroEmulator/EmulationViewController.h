@@ -10,6 +10,6 @@
 
 @interface EmulationViewController : NSViewController
 
-@property (weak) id delegate;
+@property (strong) id delegate;
 
 @end

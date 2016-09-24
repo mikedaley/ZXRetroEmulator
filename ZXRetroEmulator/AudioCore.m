@@ -17,7 +17,7 @@
 @interface AudioCore ()
 
 // Reference to the machine using the audio core
-@property (weak) ZXSpectrum48 *machine;
+@property (strong) ZXSpectrum48 *machine;
 
 // reference to the emulation queue that is being used to drive the emulation
 @property (assign) dispatch_queue_t emulationQueue;

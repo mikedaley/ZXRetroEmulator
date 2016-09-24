@@ -17,7 +17,7 @@
 @interface ZXSpectrum48 ()
 
 // Emulation queue and timer
-@property (weak) NSView *emulationView;
+@property (strong) NSView *emulationView;
 @property (strong) dispatch_queue_t emulationQueue;
 @property (strong) dispatch_source_t emulationTimer;
 @property (assign) CGColorSpaceRef colourSpace;
@@ -136,7 +136,6 @@ int             pixelAddress;
 int             attrAddress;
 
 uint16          emuTsLine[192];
-int             emuScreenLine;
 
 //*** Audio
 double          audioBeeperValue;
@@ -187,6 +186,8 @@ PixelData pallette[] = {
 // Keyboard matrix data
 unsigned char keyboardMap[8];
 
+bool test;
+
 #pragma mark - Implementation
 
 @implementation ZXSpectrum48
@@ -222,18 +223,18 @@ unsigned char keyboardMap[8];
         tsVerticalDisplay = pxVerticalDisplay * tsPerLine;
         tsHorizontalDisplay = 128;
         tsPerChar = 4;
-        tsToOrigin = 14335;
+        tsToOrigin = 14336;
         
         emuShouldInterpolate = YES;
         emuDisplayBitsPerPx = 32;
         emuDisplayBitsPerComponent = 8;
         emuDisplayBytesPerPx = 4;
         
-        emuLeftBorderChars = 40 / 8;
-        emuRightBorderChars = 40 / 8;
+        emuLeftBorderChars = 32 / 8;
+        emuRightBorderChars = 64 / 8;
         
-        emuBottomBorderLines = 40;
-        emuTopBorderLines = 40;
+        emuBottomBorderLines = 56;
+        emuTopBorderLines = 56;
         
         emuBeamXMax = (32 + emuRightBorderChars);
         emuBeamYMax = (192 + emuBottomBorderLines);
@@ -241,7 +242,7 @@ unsigned char keyboardMap[8];
         emuDisplayPxWidth = 256 + 8 * (emuLeftBorderChars + emuRightBorderChars);
         emuDisplayPxHeight = 192 + emuTopBorderLines + emuBottomBorderLines;
         
-        emuDisplayTsOffset = 4;
+        emuDisplayTsOffset = 0;
 
         [self startDisplayFrame];
         
@@ -412,15 +413,15 @@ unsigned char keyboardMap[8];
     // Reset display variables
     pixelBeamX = -emuLeftBorderChars;
     pixelBeamY = -emuTopBorderLines;
-    emuDisplayTs = tsToOrigin - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar) - emuDisplayTsOffset;
+    emuDisplayTs = 16 + tsToOrigin - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar) - emuDisplayTsOffset;
     emuCurrentLineStartTs = emuDisplayTs;
     emuDisplayBufferIndex = 0;
-    emuScreenLine = 0;
     
     // Reset audio variables
     audioBufferIndex = 0;
     audioTsCounter = 0;
     audioTsStepCounter = 0;
+    test = false;
 }
 
 - (void)updateSreenWithTStates:(int)numberTs
@@ -492,8 +493,8 @@ unsigned char keyboardMap[8];
             // If the new line is within the bitmap screen update the pixel and attrubute line addresses
             if (pixelBeamY >= 0 && pixelBeamY < pxVerticalDisplay)
             {
-                pixelAddress = kBitmapAddress | ( (pixelBeamY & 0xc0) << 5 ) | ( (pixelBeamY & 0x07) << 8 ) | ( (pixelBeamY & 0x38) << 2 );
-                attrAddress = kAttributeAddress | ( (pixelBeamY & 0xf8) << 2 );
+                pixelAddress = kBitmapAddress + ( (pixelBeamY & 0xc0) << 5 ) + ( (pixelBeamY & 0x07) << 8 ) + ( (pixelBeamY & 0x38) << 2 );
+                attrAddress = kAttributeAddress + ( (pixelBeamY & 0xf8) << 2 );
             }
             
             // If we are not past the bottom of the screen then update the drawing Ts with an entire line
@@ -844,9 +845,7 @@ static unsigned char floatingBus()
         core->SetRegister(CZ80Core::eREG_PC, (pc_msb << 8) | pc_lsb);
         core->SetRegister(CZ80Core::eREG_SP, core->GetRegister(CZ80Core::eREG_SP) + 2);
         
-        // Reset the audio buffer
         [self resetSound];
-
         [self resetKeyboardMap];
         
         // Reset the display variables
