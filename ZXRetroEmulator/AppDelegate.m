@@ -34,8 +34,8 @@
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
-    _viewWidth = 32 + 256 + 64;
-    _viewHeight = 56 + 192 + 56;
+    _viewWidth = 32 + 256 + 64 + 96;
+    _viewHeight = 56 + 192 + 56 + 8;
     _viewScale = 2.0;
     [self setupViews];
     
@@ -45,8 +45,8 @@
     _emulationViewController.delegate = _machine;
     [_machine start];
     
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"test1" ofType:@"sna"];
-    [_machine loadSnapshotWithPath:path];
+//    NSString *path = [[NSBundle mainBundle] pathForResource:@"test1" ofType:@"sna"];
+//    [_machine loadSnapshotWithPath:path];
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification

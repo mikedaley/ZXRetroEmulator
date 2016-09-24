@@ -19,6 +19,8 @@
 @property (assign) int16_t *audioBuffer;
 @property (strong) AudioCore *audioCore;
 
+@property (assign) NSInteger emuDispValue;
+
 #pragma mark - Methods
 
 - (instancetype)initWithEmulationScreenView:(NSView *)view;

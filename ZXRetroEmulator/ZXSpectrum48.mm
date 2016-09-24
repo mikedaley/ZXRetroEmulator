@@ -30,8 +30,9 @@
 
 #define kTstatesPerFrame 69888
 
-#define kScreenBorder 1
-#define kScreenPaper 2
+#define kDisplayBorder 1
+#define kDisplayPaper 2
+#define kDisplayRetrace 3
 
 #define kBitmapAddress 16384
 #define kBitmapSize 6144
@@ -125,6 +126,7 @@ int             emuBeamYMax;
 // Tracks the number of tStates used for drawing the screen. This is compared with the number of tStates that have passed
 // in the current frame so that the right number of 8x1 screen chunks are drawn
 int             emuDisplayTs;
+int             emuDisplayLine;
 int             emuCurrentLineStartTs;
 int             emuDisplayTsOffset;
 
@@ -136,6 +138,7 @@ int             pixelAddress;
 int             attrAddress;
 
 uint16          emuTsLine[192];
+uint8           emuDisplayTsTable[312][224];
 
 //*** Audio
 double          audioBeeperValue;
@@ -222,6 +225,7 @@ bool test;
         tsVerticalBlank = pxVerticalBlank * tsPerLine;
         tsVerticalDisplay = pxVerticalDisplay * tsPerLine;
         tsHorizontalDisplay = 128;
+        
         tsPerChar = 4;
         tsToOrigin = 14336;
         
@@ -230,19 +234,18 @@ bool test;
         emuDisplayBitsPerComponent = 8;
         emuDisplayBytesPerPx = 4;
         
-        emuLeftBorderChars = 32 / 8;
-        emuRightBorderChars = 64 / 8;
+        emuLeftBorderChars = 32;
+        emuRightBorderChars = 64;
         
         emuBottomBorderLines = 56;
         emuTopBorderLines = 56;
         
-        emuBeamXMax = (32 + emuRightBorderChars);
-        emuBeamYMax = (192 + emuBottomBorderLines);
-
-        emuDisplayPxWidth = 256 + 8 * (emuLeftBorderChars + emuRightBorderChars);
-        emuDisplayPxHeight = 192 + emuTopBorderLines + emuBottomBorderLines;
+        emuDisplayPxWidth = 256 + emuLeftBorderChars + emuRightBorderChars + 96;
+        emuDisplayPxHeight = 192 + emuTopBorderLines + emuBottomBorderLines + 8;
         
         emuDisplayTsOffset = 0;
+        emuDisplayLine = 0;
+        emuDisplayTs = 0;
 
         [self startDisplayFrame];
         
@@ -262,6 +265,7 @@ bool test;
         [self resetSound];
         [self buildContentionTable];
         [self buildScreenLineAddressTable];
+        [self buildDisplayTsTable];
         [self resetKeyboardMap];
         [self loadDefaultROM];
         
@@ -311,6 +315,21 @@ bool test;
     {
         count -= [self step];
     }
+
+    core->ResetTStates( tsPerFrame );
+    core->SignalInterrupt();
+    
+    [self generateImage];
+    
+    // Update the UI image with the new emulator image
+    dispatch_async(dispatch_get_main_queue(), ^
+                   {
+                       self.emulationView.layer.contents = self.imageRef;
+                   });
+    
+    // Frame counter used to control the flash cycle
+    frameCounter++;
+
 }
 
 - (int)step
@@ -319,22 +338,22 @@ bool test;
     [self updateSreenWithTStates:tsCPU];
     [self updateAudioWithTStates:tsCPU];
     
-    if (core->GetTStates() >= tsPerFrame )
-    {
-        core->ResetTStates( tsPerFrame );
-        core->SignalInterrupt();
-        
-        [self generateImage];
-        
-        // Update the UI image with the new emulator image
-        dispatch_async(dispatch_get_main_queue(), ^
-        {
-           self.emulationView.layer.contents = self.imageRef;
-        });
-
-        // Frame counter used to control the flash cycle
-        frameCounter++;
-    }
+//    if (core->GetTStates() >= tsPerFrame )
+//    {
+//        core->ResetTStates( tsPerFrame );
+//        core->SignalInterrupt();
+//        
+//        [self generateImage];
+//        
+//        // Update the UI image with the new emulator image
+//        dispatch_async(dispatch_get_main_queue(), ^
+//        {
+//           self.emulationView.layer.contents = self.imageRef;
+//        });
+//
+//        // Frame counter used to control the flash cycle
+//        frameCounter++;
+//    }
     
     return tsCPU;
 }
@@ -411,103 +430,127 @@ bool test;
 - (void)startDisplayFrame
 {
     // Reset display variables
-    pixelBeamX = -emuLeftBorderChars;
-    pixelBeamY = -emuTopBorderLines;
-    emuDisplayTs = 16 + tsToOrigin - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar) - emuDisplayTsOffset;
-    emuCurrentLineStartTs = emuDisplayTs;
     emuDisplayBufferIndex = 0;
+    emuDisplayLine = 0;
+//    emuDisplayTs = 0;
     
     // Reset audio variables
     audioBufferIndex = 0;
     audioTsCounter = 0;
     audioTsStepCounter = 0;
-    test = false;
+}
+
+- (void)buildDisplayTsTable
+{
+    for(int line = 0; line < 312; line++)
+    {
+        for(int ts = 0 ; ts < tsPerLine; ts++)
+        {
+            if (line >= 0  && line < 8)
+            {
+                emuDisplayTsTable[line][ts] = kDisplayRetrace;
+            }
+
+            if (line >= 8  && line < 56)
+            {
+                if (ts >= 176 && ts < 224)
+                {
+                    emuDisplayTsTable[line][ts] = kDisplayRetrace;
+                }
+                else
+                {
+                    emuDisplayTsTable[line][ts] = kDisplayBorder;
+                }
+            }
+
+            if (line >= (pxVerticalBlank + pxTopBorder + pxVerticalDisplay) && line < 312)
+            {
+                if (ts >= 176 && ts < 224)
+                {
+                    emuDisplayTsTable[line][ts] = kDisplayRetrace;
+                }
+                else
+                {
+                    emuDisplayTsTable[line][ts] = kDisplayBorder;
+                }
+            }
+
+            if (line >= pxTopBorder && line < (pxVerticalBlank + pxTopBorder + pxVerticalDisplay))
+            {
+                if ((ts >= 0 && ts < 16) || (ts >= 144 && ts < 176))
+                {
+                    emuDisplayTsTable[line][ts] = kDisplayBorder;
+                }
+                else if (ts >= 176 && ts < 224)
+                {
+                    emuDisplayTsTable[line][ts] = kDisplayRetrace;
+                }
+                else
+                {
+                    emuDisplayTsTable[line][ts] = kDisplayPaper;
+                }
+            }
+        }
+    }
 }
 
 - (void)updateSreenWithTStates:(int)numberTs
 {
-    // Keep drawing 8x1 screen chucks based on the number of Ts in the current frame
-    while (emuDisplayTs <= core->GetTStates() && emuDisplayTs != -1)
+    for (int i = 0; i < numberTs; i++)
     {
-        // Draw the borders
-        if (pixelBeamY < 0 || pixelBeamY >= pxVerticalDisplay || pixelBeamX < 0 || pixelBeamX >= 32)
-        {
-            for (int i = 0; i < 8; i ++)
-            {
+        switch (emuDisplayTsTable[emuDisplayLine][emuDisplayTs]) {
+            case kDisplayBorder:
                 emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].r;
                 emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].g;
                 emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].b;
                 emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].a;
-            }
-        }
-        else
-        {   // Draw the main bitmap screen
-            int pixelByte = memory[pixelAddress | pixelBeamX];
-            int attributeByte = memory[attrAddress | pixelBeamX];
-            
-            // Extract the ink and paper colours from the attribute byte read in
-            int ink = (attributeByte & 0x07) + ((attributeByte & 0x40) >> 3);
-            int paper = ((attributeByte >> 3) & 0x07) + ((attributeByte & 0x40) >> 3);
-            
-            // Switch ink and paper if the flash phase has changed
-            if ((frameCounter & 16) && (attributeByte & 0x80))
-            {
-                int tempPaper = paper;
-                paper = ink;
-                ink = tempPaper;
-            }
 
-            // Loop through the current pixel byte drawing pixels into the screen image buffer
-            for (int b = 0x80; b; b >>= 1)
-            {
-                if (pixelByte & b) {
-                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[ink].r;
-                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[ink].g;
-                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[ink].b;
-                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[ink].a;
-                }
-                else
-                {
-                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[paper].r;
-                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[paper].g;
-                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[paper].b;
-                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[paper].a;
-                }
-            }
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].r;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].g;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].b;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].a;
+                break;
+                
+            case kDisplayPaper:
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].r;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].g;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].b;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].a;
+
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].r;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].g;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].b;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].a;
+                break;
+                
+            case kDisplayRetrace:
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].r;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].g;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].b;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].a;
+                
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].r;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].g;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].b;
+                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].a;
+                
+                break;
+                
+            default:
+                break;
         }
+
+        emuDisplayTs++;
         
-        // Step the pixel beam 1 char position right, which is in effect 8 pixels
-        pixelBeamX ++;
-        
-        if (pixelBeamX < emuBeamXMax)
+        if (emuDisplayTs == tsPerLine)
         {
-            // Not reached the right edge of the screen so update the drawing Ts by 1 char
-            emuDisplayTs += tsPerChar;
-        }
-        else
-        {
-            // Reached the right edge of the screen so reset the X beam and drop down one line
-            pixelBeamX = -emuLeftBorderChars;
-            pixelBeamY++;
+            emuDisplayTs = 0;
+            emuDisplayLine++;
             
-            // If the new line is within the bitmap screen update the pixel and attrubute line addresses
-            if (pixelBeamY >= 0 && pixelBeamY < pxVerticalDisplay)
-            {
-                pixelAddress = kBitmapAddress + ( (pixelBeamY & 0xc0) << 5 ) + ( (pixelBeamY & 0x07) << 8 ) + ( (pixelBeamY & 0x38) << 2 );
-                attrAddress = kAttributeAddress + ( (pixelBeamY & 0xf8) << 2 );
-            }
-            
-            // If we are not past the bottom of the screen then update the drawing Ts with an entire line
-            if (pixelBeamY < emuBeamYMax)
-            {
-                emuCurrentLineStartTs += tsPerLine;
-                emuDisplayTs = emuCurrentLineStartTs;
-            }
-            else
-            {
-                // Finished the screen
-                emuDisplayTs = -1;
-            }
+//            if (emuDisplayLine == 312)
+//            {
+//                emuDisplayLine = 0;
+//            }
         }
     }
 }
@@ -830,7 +873,7 @@ static unsigned char floatingBus()
         core->SetRegister(CZ80Core::eREG_SP, ((unsigned short *)&fileBytes[21])[1]);
         
         // Border colour
-        borderColour = fileBytes[26];
+        borderColour = fileBytes[26] & 0x07;
         
         // Set the IM
         core->SetIMMode(fileBytes[25]);
