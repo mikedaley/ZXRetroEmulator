@@ -63,6 +63,10 @@ unsigned char   ioContentionTable[kTstatesPerFrame];
 
 // Floating bus
 unsigned char   floatingBusTable[8] = {0, 0, 1, 2, 1, 2, 0, 0};
+typedef enum : unsigned char {
+    Pixel = 1,
+    Attribute = 2
+} FloatingBusValueType;
 
 // Machine specific tState values
 int             tsPerFrame;
@@ -256,6 +260,7 @@ unsigned char keyboardMap[8];
         
         [self resetSound];
         [self buildContentionTable];
+        [self buildScreenLineAddressTable];
         [self resetKeyboardMap];
         [self loadDefaultROM];
         
@@ -525,6 +530,21 @@ unsigned char keyboardMap[8];
     CFRelease(dataRef);
 }
 
+- (void)buildScreenLineAddressTable
+{
+    // Build an address lookup table for the start of each line in display memory
+    for(int i = 0; i < 3; i++)
+    {
+        for(int j = 0; j < 8; j++)
+        {
+            for(int k = 0; k < 8; k++)
+            {
+                emuTsLine[(i << 6) + (j << 3) + k] = (i << 11) + (j << 5) + (k << 8);
+            }
+        }
+    }
+}
+
 #pragma mark - Memory & IO methods
 
 static unsigned char coreMemoryRead(unsigned short address, int tstates)
@@ -692,18 +712,6 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
 
 - (void)buildContentionTable
 {
-    // Build an address lookup table for the start of each line in display memory
-    for(int i = 0; i < 3; i++)
-    {
-        for(int j = 0; j < 8; j++)
-        {
-            for(int k = 0; k < 8; k++)
-            {
-                emuTsLine[(i << 6) + (j << 3) + k] = (i << 11) + (j << 5) + (k << 8);
-            }
-        }
-    }
-    
     for (int i = 0; i < tsPerFrame; i++)
     {
         memoryContentionTable[i] = 0;
@@ -727,33 +735,38 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
 
 #pragma mark - Floating Bus
 
+// When the Z80 reads from an unattached port, such as 0xFF, it actually reads the data currently on the
+// Spectrums ULA data bus. This may happen to be a byte being transferred from screen memory. If the ULA
+// is building the border then the bus is idle and the return value is 0xFF, otherwise its possible to
+// predict if the ULA is reading a pixel or attribute byte based on the current t-state.
+// This routine works out what would be on the ULA bus for a given t-state and returns the result emulating
+// the floating bus behaviour
 static unsigned char floatingBus()
 {
-    // Calculate the current scan line and tState within that scan line
-    int currentTs = core->GetTStates();
-    int line = (currentTs / tsPerLine);
-    int t = ((currentTs - 1) % tsPerLine);
+    // Calculate the current screen line and tState within that screen line
+    int cpuTs = core->GetTStates();
+    int currentDisplayLine = (cpuTs / tsPerLine);
+    int currentTs = ((cpuTs - 1) % tsPerLine);
 
-    // If the line and tState are within the paper of the screen then grab the
+    // If the line and tState are within the bitmap of the screen then grab the
     // pixel of attribute value
-    if (line >= (pxTopBorder + pxVerticalBlank) && line < (pxVerticalDisplay + pxTopBorder + pxVerticalBlank) && t < tsHorizontalDisplay)
+    if (currentDisplayLine >= (pxTopBorder + pxVerticalBlank)
+        && currentDisplayLine < (pxVerticalDisplay + pxTopBorder + pxVerticalBlank)
+        && currentTs < tsHorizontalDisplay)
     {
-        // Use the floatingBusTable to decide if a pixel or attribute value should be grabbed. The table contains
-        // 8 entries
-        uint i = floatingBusTable[ t & 0x07 ];
+        // Use the floatingBusTable to decide if a pixel or attribute value should be grabbed
+        unsigned char ulaValueType = floatingBusTable[ currentTs & 0x07 ];
         
         // Calculate where in memory the values are to be taken from
-        int y = line - (pxTopBorder + pxVerticalBlank);
-        int x = t >> 2;
+        int y = currentDisplayLine - (pxTopBorder + pxVerticalBlank);
+        int x = currentTs >> 2;
         
-        // Return pixel data on the bus
-        if (i == 1)
+        if (ulaValueType == Pixel)
         {
             return memory[kBitmapAddress + emuTsLine[y] + x];
         }
         
-        // Return attribute data on the bus
-        if (i == 2)
+        if (ulaValueType == Attribute)
         {
             return memory[kAttributeAddress + ((y >> 3) << 5) + x];
         }

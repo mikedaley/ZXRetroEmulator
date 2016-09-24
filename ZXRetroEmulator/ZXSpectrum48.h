@@ -15,8 +15,8 @@
 
 #pragma mark - Properties
 
+// Buffer used to hold the sound samples generated for each emulation frame
 @property (assign) int16_t *audioBuffer;
-
 @property (strong) AudioCore *audioCore;
 
 #pragma mark - Methods
@@ -24,8 +24,8 @@
 - (instancetype)initWithEmulationScreenView:(NSView *)view;
 - (void)start;
 - (void)pause;
-- (void)loadSnapshotWithPath:(NSString *)path;
 - (void)reset;
+- (void)loadSnapshotWithPath:(NSString *)path;
 - (void)doFrame;
 
 @end
