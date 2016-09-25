@@ -431,8 +431,8 @@ bool test;
 {
     // Reset display variables
     emuDisplayBufferIndex = 0;
-    emuDisplayLine = 0;
-//    emuDisplayTs = 0;
+//    emuDisplayLine = 0;
+    emuDisplayTs = 0;
     
     // Reset audio variables
     audioBufferIndex = 0;
@@ -498,46 +498,48 @@ bool test;
 {
     for (int i = 0; i < numberTs; i++)
     {
-        switch (emuDisplayTsTable[emuDisplayLine][emuDisplayTs]) {
-            case kDisplayBorder:
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].r;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].g;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].b;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].a;
+        if (emuDisplayLine || emuDisplayTs >= 4)
+        {
+            switch (emuDisplayTsTable[emuDisplayLine][emuDisplayTs - 4]) {
+                case kDisplayBorder:
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].r;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].g;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].b;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].a;
 
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].r;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].g;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].b;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].a;
-                break;
-                
-            case kDisplayPaper:
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].r;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].g;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].b;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].a;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].r;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].g;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].b;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].a;
+                    break;
+                    
+                case kDisplayRetrace:
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].r;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].g;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].b;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].a;
+                    
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].r;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].g;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].b;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].a;
+                    break;
 
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].r;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].g;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].b;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[7].a;
-                break;
-                
-            case kDisplayRetrace:
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].r;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].g;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].b;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].a;
-                
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].r;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].g;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].b;
-                emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[2].a;
-                
-                break;
-                
-            default:
-                break;
+                case kDisplayPaper:
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[4].r;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[4].g;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[4].b;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[4].a;
+
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[4].r;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[4].g;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[4].b;
+                    emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[4].a;
+                    break;
+                    
+                default:
+                    break;
+            }
         }
 
         emuDisplayTs++;
@@ -547,10 +549,10 @@ bool test;
             emuDisplayTs = 0;
             emuDisplayLine++;
             
-//            if (emuDisplayLine == 312)
-//            {
-//                emuDisplayLine = 0;
-//            }
+            if (emuDisplayLine == 312)
+            {
+                emuDisplayLine = 0;
+            }
         }
     }
 }
