@@ -243,6 +243,7 @@ int tstates;
         emuDisplayPxHeight = 192 + emuTopBorderLines + emuBottomBorderLines;
         
         emuDisplayTsOffset = 4;
+        
         [self startDisplayFrame];
         
         // Setup the display buffer and length used to store the output from the emulator
@@ -317,7 +318,6 @@ int tstates;
 {
     
     tstates = core->Execute(0);
-
     [self updateAudioWithTStates:tstates];
     updateScreenWithTStates(tstates);
 
@@ -326,11 +326,11 @@ int tstates;
         core->ResetTStates( tsPerFrame );
         core->SignalInterrupt();
         
-        
+        [self generateImage];
+
         // Update the UI image with the new emulator image
         dispatch_async(dispatch_get_main_queue(), ^
         {
-            [self generateImage];
             self.emulationView.layer.contents = self.imageRef;
         });
 
@@ -444,8 +444,8 @@ static void updateScreenWithTStates(int numberTs)
         }
         else
         {   // Draw the main bitmap screen
-            int pixelByte = memory[pixelAddress | pixelBeamX];
-            int attributeByte = memory[attrAddress | pixelBeamX];
+            int pixelByte = memory[pixelAddress + pixelBeamX];
+            int attributeByte = memory[attrAddress + pixelBeamX];
             
             // Extract the ink and paper colours from the attribute byte read in
             int ink = (attributeByte & 0x07) + ((attributeByte & 0x40) >> 3);
@@ -558,9 +558,12 @@ static unsigned char coreMemoryRead(unsigned short address, int tstates)
 static void coreMemoryWrite(unsigned short address, unsigned char data, int tstates)
 {
     // Only allow writing to RAM not ROM
-    if (address >= 16384) {
-        memory[address] = data;
+    if (address < 16384)
+    {
+        return;
     }
+    
+    memory[address] = data;
 }
 
 static unsigned char coreIORead(unsigned short address, int tstates)
@@ -686,15 +689,16 @@ static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
         }
     }
 
-    // Bit  7   6   5   4   3   2   1   0
-    //    +---+---+---+---+---+-----------+
-    //    |   |   |   | E | M |  BORDER   |
-    //    +---+---+---+---+---+-----------+
+    // Port: 0xFE
+    //   7   6   5   4   3   2   1   0
+    // +---+---+---+---+---+-----------+
+    // |   |   |   | E | M |  BORDER   |
+    // +---+---+---+---+---+-----------+
     if ((address & 0xff) == 0xfe)
     {
-        borderColour = data & 0x07;
         audioEar = (data & 0x10) >> 4;
         audioMic = (data & 0x08) >> 3;
+        borderColour = data & 0x07;
     }
 }
 
@@ -832,7 +836,7 @@ static unsigned char floatingBus()
         core->SetRegister(CZ80Core::eREG_SP, ((unsigned short *)&fileBytes[21])[1]);
         
         // Border colour
-        borderColour = fileBytes[26];
+        borderColour = fileBytes[26] & 0x07;
         
         // Set the IM
         core->SetIMMode(fileBytes[25]);
