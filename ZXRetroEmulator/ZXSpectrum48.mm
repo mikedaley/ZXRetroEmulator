@@ -186,7 +186,7 @@ PixelData pallette[] = {
 // Keyboard matrix data
 unsigned char keyboardMap[8];
 
-int tstates;
+int screenTs;
 
 #pragma mark - Implementation
 
@@ -309,16 +309,15 @@ int tstates;
     int count = tsPerFrame;
     while (count > 0)
     {
-        tstates = [self step];
-        count -= tstates;
+        count -= [self step];
     }
 }
 
 - (int)step
 {
     
-    tstates = core->Execute(0);
-    [self updateAudioWithTStates:tstates];
+    int tsCPU = core->Execute(0);
+    [self updateAudioWithTStates:tsCPU];
 
     if (core->GetTStates() >= tsPerFrame )
     {
@@ -339,7 +338,7 @@ int tstates;
         frameCounter++;
     }
     
-    return tstates;
+    return tsCPU;
 }
 
 - (void)doFrame
@@ -419,7 +418,7 @@ int tstates;
     emuDisplayTs = tsToOrigin - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar) - emuDisplayTsOffset;
     emuCurrentLineStartTs = emuDisplayTs;
     emuDisplayBufferIndex = 0;
-    tstates = 0;
+    screenTs = 0;
     
     // Reset audio variables
     audioBufferIndex = 0;
@@ -513,6 +512,8 @@ static void updateScreenWithTStates(int numberTs)
             }
         }
     }
+    
+    screenTs += numberTs;
 }
 
 - (void)generateImage
@@ -700,6 +701,7 @@ static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
     if ((address & 0xff) == 0xfe)
     {
         updateScreenWithTStates(core->GetTStates() - emuDisplayTs);
+        
         audioEar = (data & 0x10) >> 4;
         audioMic = (data & 0x08) >> 3;
         borderColour = data & 0x07;
