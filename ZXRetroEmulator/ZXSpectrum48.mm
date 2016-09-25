@@ -186,7 +186,7 @@ PixelData pallette[] = {
 // Keyboard matrix data
 unsigned char keyboardMap[8];
 
-bool test;
+int tstates;
 
 #pragma mark - Implementation
 
@@ -223,7 +223,7 @@ bool test;
         tsVerticalDisplay = pxVerticalDisplay * tsPerLine;
         tsHorizontalDisplay = 128;
         tsPerChar = 4;
-        tsToOrigin = 14336;
+        tsToOrigin = 14335;
         
         emuShouldInterpolate = YES;
         emuDisplayBitsPerPx = 32;
@@ -242,7 +242,7 @@ bool test;
         emuDisplayPxWidth = 256 + 8 * (emuLeftBorderChars + emuRightBorderChars);
         emuDisplayPxHeight = 192 + emuTopBorderLines + emuBottomBorderLines;
         
-        emuDisplayTsOffset = 0;
+        emuDisplayTsOffset = 4;
 
         [self startDisplayFrame];
         
@@ -309,27 +309,28 @@ bool test;
     int count = tsPerFrame;
     while (count > 0)
     {
-        count -= [self step];
+        tstates = [self step];
+        count -= tstates;
     }
 }
 
 - (int)step
 {
     int tsCPU = core->Execute(0);
-    [self updateSreenWithTStates:tsCPU];
     [self updateAudioWithTStates:tsCPU];
-    
+    updateScreenWithTStates(tsCPU);
+
     if (core->GetTStates() >= tsPerFrame )
     {
         core->ResetTStates( tsPerFrame );
         core->SignalInterrupt();
         
-        [self generateImage];
         
         // Update the UI image with the new emulator image
         dispatch_async(dispatch_get_main_queue(), ^
         {
-           self.emulationView.layer.contents = self.imageRef;
+            [self generateImage];
+            self.emulationView.layer.contents = self.imageRef;
         });
 
         // Frame counter used to control the flash cycle
@@ -362,7 +363,7 @@ bool test;
             default:
                 break;
         }
-
+        
         [self startDisplayFrame];
         [self generateFrame];
     });
@@ -413,7 +414,7 @@ bool test;
     // Reset display variables
     pixelBeamX = -emuLeftBorderChars;
     pixelBeamY = -emuTopBorderLines;
-    emuDisplayTs = 16 + tsToOrigin - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar) - emuDisplayTsOffset;
+    emuDisplayTs = tsToOrigin - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar) - emuDisplayTsOffset;
     emuCurrentLineStartTs = emuDisplayTs;
     emuDisplayBufferIndex = 0;
     
@@ -421,13 +422,13 @@ bool test;
     audioBufferIndex = 0;
     audioTsCounter = 0;
     audioTsStepCounter = 0;
-    test = false;
+    tstates = 0;
 }
 
-- (void)updateSreenWithTStates:(int)numberTs
+static void updateScreenWithTStates(int numberTs)
 {
     // Keep drawing 8x1 screen chucks based on the number of Ts in the current frame
-    while (emuDisplayTs <= core->GetTStates() && emuDisplayTs != -1)
+    while (emuDisplayTs < core->GetTStates() && emuDisplayTs != -1)
     {
         // Draw the borders
         if (pixelBeamY < 0 || pixelBeamY >= pxVerticalDisplay || pixelBeamX < 0 || pixelBeamX >= 32)
@@ -559,6 +560,7 @@ static void coreMemoryWrite(unsigned short address, unsigned char data, int tsta
     if (address >= 16384) {
         memory[address] = data;
     }
+    
 }
 
 static unsigned char coreIORead(unsigned short address, int tstates)
