@@ -243,7 +243,6 @@ int tstates;
         emuDisplayPxHeight = 192 + emuTopBorderLines + emuBottomBorderLines;
         
         emuDisplayTsOffset = 4;
-
         [self startDisplayFrame];
         
         // Setup the display buffer and length used to store the output from the emulator
@@ -316,9 +315,11 @@ int tstates;
 
 - (int)step
 {
-    int tsCPU = core->Execute(0);
-    [self updateAudioWithTStates:tsCPU];
-    updateScreenWithTStates(tsCPU);
+    
+    tstates = core->Execute(0);
+
+    [self updateAudioWithTStates:tstates];
+    updateScreenWithTStates(tstates);
 
     if (core->GetTStates() >= tsPerFrame )
     {
@@ -337,7 +338,7 @@ int tstates;
         frameCounter++;
     }
     
-    return tsCPU;
+    return tstates;
 }
 
 - (void)doFrame
@@ -417,12 +418,12 @@ int tstates;
     emuDisplayTs = tsToOrigin - (emuTopBorderLines * tsPerLine) - (emuLeftBorderChars * tsPerChar) - emuDisplayTsOffset;
     emuCurrentLineStartTs = emuDisplayTs;
     emuDisplayBufferIndex = 0;
+    tstates = 0;
     
     // Reset audio variables
     audioBufferIndex = 0;
     audioTsCounter = 0;
     audioTsStepCounter = 0;
-    tstates = 0;
 }
 
 static void updateScreenWithTStates(int numberTs)
@@ -560,7 +561,6 @@ static void coreMemoryWrite(unsigned short address, unsigned char data, int tsta
     if (address >= 16384) {
         memory[address] = data;
     }
-    
 }
 
 static unsigned char coreIORead(unsigned short address, int tstates)
