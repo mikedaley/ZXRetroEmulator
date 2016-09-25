@@ -34,8 +34,8 @@
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
-    _viewWidth = 32 + 256 + 64;
-    _viewHeight = 56 + 192 + 56;
+    _viewWidth = 48 + 256 + 48;
+    _viewHeight = 48 + 192 + 48;
     _viewScale = 2.0;
     [self setupViews];
     

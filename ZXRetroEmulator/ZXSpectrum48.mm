@@ -230,11 +230,11 @@ int tstates;
         emuDisplayBitsPerComponent = 8;
         emuDisplayBytesPerPx = 4;
         
-        emuLeftBorderChars = 32 / 8;
-        emuRightBorderChars = 64 / 8;
+        emuLeftBorderChars = 48 / 8;
+        emuRightBorderChars = 48 / 8;
         
-        emuBottomBorderLines = 56;
-        emuTopBorderLines = 56;
+        emuBottomBorderLines = 48;
+        emuTopBorderLines = 48;
         
         emuBeamXMax = (32 + emuRightBorderChars);
         emuBeamYMax = (192 + emuBottomBorderLines);
@@ -319,12 +319,13 @@ int tstates;
     
     tstates = core->Execute(0);
     [self updateAudioWithTStates:tstates];
-    updateScreenWithTStates(tstates);
 
     if (core->GetTStates() >= tsPerFrame )
     {
         core->ResetTStates( tsPerFrame );
         core->SignalInterrupt();
+        
+        updateScreenWithTStates(tsPerFrame - emuDisplayTs);
         
         [self generateImage];
 
@@ -429,7 +430,7 @@ int tstates;
 static void updateScreenWithTStates(int numberTs)
 {
     // Keep drawing 8x1 screen chucks based on the number of Ts in the current frame
-    while (emuDisplayTs < core->GetTStates() && emuDisplayTs != -1)
+    while (emuDisplayTs < (emuDisplayTs + numberTs) && emuDisplayTs != -1)
     {
         // Draw the borders
         if (pixelBeamY < 0 || pixelBeamY >= pxVerticalDisplay || pixelBeamX < 0 || pixelBeamX >= 32)
@@ -562,6 +563,8 @@ static void coreMemoryWrite(unsigned short address, unsigned char data, int tsta
     {
         return;
     }
+    
+    updateScreenWithTStates(core->GetTStates() - emuDisplayTs);
     
     memory[address] = data;
 }
@@ -696,6 +699,7 @@ static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
     // +---+---+---+---+---+-----------+
     if ((address & 0xff) == 0xfe)
     {
+        updateScreenWithTStates(core->GetTStates() - emuDisplayTs);
         audioEar = (data & 0x10) >> 4;
         audioMic = (data & 0x08) >> 3;
         borderColour = data & 0x07;
