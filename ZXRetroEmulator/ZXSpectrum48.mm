@@ -191,6 +191,8 @@ unsigned char keyboardMap[8];
 
 bool test;
 
+int screenTs;
+
 #pragma mark - Implementation
 
 @implementation ZXSpectrum48
@@ -315,45 +317,31 @@ bool test;
     {
         count -= [self step];
     }
-
-    core->ResetTStates( tsPerFrame );
-    core->SignalInterrupt();
-    
-    [self generateImage];
-    
-    // Update the UI image with the new emulator image
-    dispatch_async(dispatch_get_main_queue(), ^
-                   {
-                       self.emulationView.layer.contents = self.imageRef;
-                   });
-    
-    // Frame counter used to control the flash cycle
-    frameCounter++;
-
 }
 
 - (int)step
 {
     int tsCPU = core->Execute(0);
-    [self updateSreenWithTStates:tsCPU];
     [self updateAudioWithTStates:tsCPU];
     
-//    if (core->GetTStates() >= tsPerFrame )
-//    {
-//        core->ResetTStates( tsPerFrame );
-//        core->SignalInterrupt();
-//        
-//        [self generateImage];
-//        
-//        // Update the UI image with the new emulator image
-//        dispatch_async(dispatch_get_main_queue(), ^
-//        {
-//           self.emulationView.layer.contents = self.imageRef;
-//        });
-//
-//        // Frame counter used to control the flash cycle
-//        frameCounter++;
-//    }
+    if (core->GetTStates() >= tsPerFrame )
+    {
+        core->ResetTStates( tsPerFrame );
+        core->SignalInterrupt();
+
+        updateSreenWithTStates(tsPerFrame - screenTs);
+
+        [self generateImage];
+        
+        // Update the UI image with the new emulator image
+        dispatch_async(dispatch_get_main_queue(), ^
+        {
+           self.emulationView.layer.contents = self.imageRef;
+        });
+
+        // Frame counter used to control the flash cycle
+        frameCounter++;
+    }
     
     return tsCPU;
 }
@@ -431,8 +419,9 @@ bool test;
 {
     // Reset display variables
     emuDisplayBufferIndex = 0;
-//    emuDisplayLine = 0;
+    emuDisplayLine = 0;
     emuDisplayTs = 0;
+    screenTs = 0;
     
     // Reset audio variables
     audioBufferIndex = 0;
@@ -494,13 +483,13 @@ bool test;
     }
 }
 
-- (void)updateSreenWithTStates:(int)numberTs
+static void updateSreenWithTStates(int numberTs)
 {
     for (int i = 0; i < numberTs; i++)
     {
-        if (emuDisplayLine || emuDisplayTs >= 4)
-        {
-            switch (emuDisplayTsTable[emuDisplayLine][emuDisplayTs - 4]) {
+//        if (emuDisplayLine || emuDisplayTs >= 4)
+//        {
+            switch (emuDisplayTsTable[emuDisplayLine][emuDisplayTs]) {
                 case kDisplayBorder:
                     emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].r;
                     emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].g;
@@ -540,7 +529,7 @@ bool test;
                 default:
                     break;
             }
-        }
+//        }
 
         emuDisplayTs++;
         
@@ -555,6 +544,7 @@ bool test;
             }
         }
     }
+    screenTs += numberTs;
 }
 
 - (void)generateImage
@@ -602,6 +592,7 @@ static void coreMemoryWrite(unsigned short address, unsigned char data, int tsta
 {
     // Only allow writing to RAM not ROM
     if (address >= 16384) {
+        updateSreenWithTStates(core->GetTStates() - screenTs);
         memory[address] = data;
     }
 }
@@ -735,6 +726,7 @@ static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
     //    +---+---+---+---+---+-----------+
     if ((address & 0xff) == 0xfe)
     {
+        updateSreenWithTStates(core->GetTStates() - screenTs);
         borderColour = data & 0x07;
         audioEar = (data & 0x10) >> 4;
         audioMic = (data & 0x08) >> 3;
