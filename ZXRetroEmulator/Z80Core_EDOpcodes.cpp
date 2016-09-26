@@ -149,7 +149,7 @@ void CZ80Core::IN_D_off_C(unsigned char opcode)
 
 void CZ80Core::OUT_off_C_D(unsigned char opcode)
 {
-	Z80CoreIOWrite(m_CPURegisters.reg_pairs.regBC, m_CPURegisters.regs.regC);
+	Z80CoreIOWrite(m_CPURegisters.reg_pairs.regBC, m_CPURegisters.regs.regD);
 }
 
 //-----------------------------------------------------------------------------------------
