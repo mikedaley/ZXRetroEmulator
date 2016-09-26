@@ -426,7 +426,7 @@ unsigned char keyboardMap[8];
 - (void)updateSreenWithTStates:(int)numberTs
 {
     // Keep drawing 8x1 screen chucks based on the number of Ts in the current frame
-    while (emuDisplayTs <= core->GetTStates() + 4 && emuDisplayTs != -1)
+    while (emuDisplayTs <= core->GetTStates() && emuDisplayTs != -1)
     {
         // Draw the borders
         if (pixelBeamY < 0 || pixelBeamY >= pxVerticalDisplay || pixelBeamX < 0 || pixelBeamX >= 32)
