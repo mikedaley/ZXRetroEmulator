@@ -34,19 +34,17 @@
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
-    _viewWidth = 48 + 256 + 48;
-    _viewHeight = 48 + 192 + 48;
+    _viewWidth = 32 + 256 + 64;
+    _viewHeight = 56 + 192 + 56 ;
     _viewScale = 2.0;
     [self setupViews];
     
-    // Setup the machine to be emulated and set it as the delegate for the emaultion view controller. This means view based events such as keyDown,
-    // keyUp and flagsChanged will be passed to _machine for processing
     _machine = [[ZXSpectrum48 alloc] initWithEmulationScreenView:_emulationViewController.view];
     _emulationViewController.delegate = _machine;
     [_machine start];
     
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"test1" ofType:@"sna"];
-    [_machine loadSnapshotWithPath:path];
+//    NSString *path = [[NSBundle mainBundle] pathForResource:@"test1" ofType:@"sna"];
+//    [_machine loadSnapshotWithPath:path];
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification
