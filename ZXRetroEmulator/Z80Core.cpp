@@ -139,7 +139,7 @@ void CZ80Core::Z80CoreIOContention(unsigned short address, unsigned int t_states
 
 //-----------------------------------------------------------------------------------------
 
-int CZ80Core::Execute(int num_tstates)
+int CZ80Core::Execute(int num_tstates, int int_t_states)
 {
 	int tstates = m_CPURegisters.TStates;
 
@@ -190,7 +190,7 @@ int CZ80Core::Execute(int num_tstates)
                         break;
                 }
             }
-        } else if (m_CPURegisters.TStates > 32) {
+        } else if (m_CPURegisters.TStates > int_t_states) {
             m_CPURegisters.IntReq = false;
         }
         

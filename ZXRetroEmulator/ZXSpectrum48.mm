@@ -234,7 +234,7 @@ unsigned char keyboardMap[8];
         
         emuDisplayTsOffset = 4;
         
-        [self startDisplayFrame];
+        [self resetFrame];
         
         // Setup the display buffer and length used to store the output from the emulator
         emuDisplayBufferLength = (emuDisplayPxWidth * emuDisplayPxHeight) * emuDisplayBytesPerPx;
@@ -258,7 +258,7 @@ unsigned char keyboardMap[8];
         
         _audioCore = [[AudioCore alloc] initWithSampleRate:audioSampleRate
                                            framesPerSecond:fps
-                                            emulationQueue:dispatch_get_main_queue()
+                                            emulationQueue:_emulationQueue
                                                    machine:self];
     }
     return self;
@@ -266,7 +266,7 @@ unsigned char keyboardMap[8];
 
 - (void)start
 {
-    [self startDisplayFrame];
+    [self resetFrame];
     [self doFrame];
 }
 
@@ -275,7 +275,7 @@ unsigned char keyboardMap[8];
     
 }
 
-#pragma mark - CPU
+#pragma mark - Reset
 
 - (void)reset
 {
@@ -283,7 +283,7 @@ unsigned char keyboardMap[8];
     frameCounter = 0;
     [self resetKeyboardMap];
     [self resetSound];
-    [self startDisplayFrame];
+    [self resetFrame];
 }
 
 - (void)resetSound
@@ -294,6 +294,20 @@ unsigned char keyboardMap[8];
     audioTsStepCounter = 0;
     audioBeeperValue = 0;
 }
+
+- (void)resetFrame
+{
+    // Reset display
+    emuDisplayBufferIndex = 0;
+    emuDisplayTs = 16;
+    
+    // Reset audio
+    audioBufferIndex = 0;
+    audioTsCounter = 0;
+    audioTsStepCounter = 0;
+}
+
+#pragma mark - CPU
 
 - (void)generateFrame
 {
@@ -306,7 +320,7 @@ unsigned char keyboardMap[8];
 
 - (int)step
 {
-    int tsCPU = core->Execute(1);
+    int tsCPU = core->Execute(1, 32);
     [self updateAudioWithTStates:tsCPU];
 
     if (core->GetTStates() >= tsPerFrame )
@@ -317,7 +331,10 @@ unsigned char keyboardMap[8];
         core->SignalInterrupt();
         
         [self generateImage];
-        self.emulationView.layer.contents = self.imageRef;
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.emulationView.layer.contents = self.imageRef;            
+        });
         frameCounter++;
         emuCurrentFrameTs -= tsPerFrame;
 
@@ -328,28 +345,31 @@ unsigned char keyboardMap[8];
 
 - (void)doFrame
 {
-    switch (event)
+    dispatch_async(_emulationQueue, ^
     {
-        case None:
-            break;
-            
-        case Reset:
-            event = None;
-            [self reset];
-            break;
-            
-        case Snapshot:
-            [self reset];
-            [self loadSnapshot];
-            event = None;
-            break;
-            
-        default:
-            break;
-    }
-    
-    [self startDisplayFrame];
-    [self generateFrame];
+        switch (event)
+        {
+            case None:
+                break;
+                
+            case Reset:
+                event = None;
+                [self reset];
+                break;
+                
+            case Snapshot:
+                [self reset];
+                [self loadSnapshot];
+                event = None;
+                break;
+                
+            default:
+                break;
+        }
+        
+        [self resetFrame];
+        [self generateFrame];
+    });
 }
 
 #pragma mark - Audio
@@ -391,18 +411,6 @@ unsigned char keyboardMap[8];
 }
 
 #pragma mark - Display
-
-- (void)startDisplayFrame
-{
-    // Reset display
-    emuDisplayBufferIndex = 0;
-    emuDisplayTs = 16;
-    
-    // Reset audio
-    audioBufferIndex = 0;
-    audioTsCounter = 0;
-    audioTsStepCounter = 0;
-}
 
 static void updateScreenWithTStates(int numberTs)
 {
@@ -869,9 +877,7 @@ static unsigned char floatingBus()
         
         [self resetSound];
         [self resetKeyboardMap];
-        
-        // Reset the display variables
-        [self startDisplayFrame];
+        [self resetFrame];
     }
 }
 
