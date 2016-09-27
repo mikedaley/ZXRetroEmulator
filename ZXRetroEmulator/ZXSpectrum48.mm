@@ -187,6 +187,8 @@ PixelData pallette[] = {
 // Keyboard matrix data
 unsigned char keyboardMap[8];
 
+bool newFrame;
+
 #pragma mark - Implementation
 
 @implementation ZXSpectrum48
@@ -222,16 +224,16 @@ unsigned char keyboardMap[8];
         tsVerticalDisplay = pxVerticalDisplay * tsPerLine;
         tsHorizontalDisplay = 128;
         tsPerChar = 4;
-        tsToOrigin = 14335;
+        tsToOrigin = 14336;
         
         emuShouldInterpolate = YES;
         emuDisplayBitsPerPx = 32;
         emuDisplayBitsPerComponent = 8;
         emuDisplayBytesPerPx = 4;
         
+        // Setup the emulators
         emuLeftBorderChars = 40 / 8;
         emuRightBorderChars = 40 / 8;
-        
         emuBottomBorderLines = 40;
         emuTopBorderLines = 40;
         
@@ -314,15 +316,15 @@ unsigned char keyboardMap[8];
 
 - (int)step
 {
-    int tsCPU = core->Execute(0);
-    [self updateSreenWithTStates:tsCPU];
-    [self updateAudioWithTStates:tsCPU];
+    int tsCPU = core->Execute(1, (emuScreenLine == 0 && core->GetTStates() < 32) ? 1 : 0);
     
+    [self updateAudioWithTStates:tsCPU];
+
     if (core->GetTStates() >= tsPerFrame )
     {
+        updateSreenWithTStates(69888 - emuDisplayTs);
         core->ResetTStates( tsPerFrame );
-        core->SignalInterrupt();
-        
+
         [self generateImage];
         
         // Update the UI image with the new emulator image
@@ -423,11 +425,15 @@ unsigned char keyboardMap[8];
     audioTsStepCounter = 0;
 }
 
-- (void)updateSreenWithTStates:(int)numberTs
+void updateSreenWithTStates(int numberTs)
 {
+    numberTs /= 4;
+    
     // Keep drawing 8x1 screen chucks based on the number of Ts in the current frame
-    while (emuDisplayTs <= core->GetTStates() && emuDisplayTs != -1)
+    while (numberTs >= 0 && emuDisplayTs != -1)
     {
+        emuScreenLine = (emuDisplayTs / tsPerLine) - 1;
+        NSLog(@"%i", emuScreenLine);
         // Draw the borders
         if (pixelBeamY < 0 || pixelBeamY >= pxVerticalDisplay || pixelBeamX < 0 || pixelBeamX >= 32)
         {
@@ -508,6 +514,7 @@ unsigned char keyboardMap[8];
                 emuDisplayTs = -1;
             }
         }
+        numberTs -= 4;
     }
 }
 
@@ -555,7 +562,9 @@ static unsigned char coreMemoryRead(unsigned short address, int tstates)
 static void coreMemoryWrite(unsigned short address, unsigned char data, int tstates)
 {
     // Only allow writing to RAM not ROM
-    if (address >= 16384) {
+    if (address >= 16384)
+    {
+        updateSreenWithTStates(core->GetTStates() - emuDisplayTs);
         memory[address] = data;
     }
 }
@@ -687,8 +696,9 @@ static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
     //    +---+---+---+---+---+-----------+
     //    |   |   |   | E | M |  BORDER   |
     //    +---+---+---+---+---+-----------+
-    if ((address & 0xff) == 0xfe)
+    if (!(address & 0x01))
     {
+        updateSreenWithTStates(core->GetTStates() - emuDisplayTs);
         borderColour = data & 0x07;
         audioEar = (data & 0x10) >> 4;
         audioMic = (data & 0x08) >> 3;
