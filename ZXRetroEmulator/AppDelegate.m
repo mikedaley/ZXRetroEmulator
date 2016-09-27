@@ -45,7 +45,7 @@
     _emulationViewController.delegate = _machine;
     [_machine start];
     
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"test1" ofType:@"sna"];
+    NSString *path = [[NSBundle mainBundle] pathForResource:@"ulatest48k" ofType:@"sna"];
     [_machine loadSnapshotWithPath:path];
 }
 
