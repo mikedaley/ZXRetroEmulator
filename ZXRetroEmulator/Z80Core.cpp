@@ -139,14 +139,14 @@ void CZ80Core::Z80CoreIOContention(unsigned short address, unsigned int t_states
 
 //-----------------------------------------------------------------------------------------
 
-int CZ80Core::Execute(int num_tstates)
+int CZ80Core::Execute(int num_tstates, bool intLine)
 {
 	int tstates = m_CPURegisters.TStates;
 
 	do
 	{
-		// First process an interrupt
-        if (m_CPURegisters.IntReq)
+		// The interrupt line is kept active for the first 32 t-states of a frame to allow thigns to stabalise
+        if (intLine)
         {
             if (m_CPURegisters.EIHandled == false && m_CPURegisters.IFF1 != 0 )
             {
@@ -190,8 +190,6 @@ int CZ80Core::Execute(int num_tstates)
                         break;
                 }
             }
-        } else if (m_CPURegisters.TStates > 32) {
-            m_CPURegisters.IntReq = false;
         }
         
         // Clear the EIHandle flag
