@@ -130,7 +130,7 @@ int             attrAddress;
 
 uint16          emuTsLine[192];
 uint8           emuDisplayTsTable[312][224];
-int             emuDisplayDelta;
+int             emuCurrentFrameTs;
 
 //*** Audio
 double          audioBeeperValue;
@@ -312,12 +312,15 @@ unsigned char keyboardMap[8];
     if (core->GetTStates() >= tsPerFrame )
     {
         updateScreenWithTStates(core->GetTStates() - emuDisplayTs);
-        emuDisplayDelta = core->GetTStates() - tsPerFrame;
-        core->ResetTStates( core->GetTStates() );
+        
+        core->ResetTStates( tsPerFrame );
         core->SignalInterrupt();
+        
         [self generateImage];
         self.emulationView.layer.contents = self.imageRef;
         frameCounter++;
+        emuCurrentFrameTs -= tsPerFrame;
+
     }
     
     return tsCPU;
@@ -393,7 +396,7 @@ unsigned char keyboardMap[8];
 {
     // Reset display
     emuDisplayBufferIndex = 0;
-    emuDisplayTs = 0;
+    emuDisplayTs = 16;
     
     // Reset audio
     audioBufferIndex = 0;
@@ -403,12 +406,12 @@ unsigned char keyboardMap[8];
 
 static void updateScreenWithTStates(int numberTs)
 {
-    numberTs = numberTs / 4;
+    numberTs = (numberTs / 4) + 4;
     
     while (numberTs > 0)
     {
-        int line = (emuDisplayTs + 12) / 224;
-        int ts = ((emuDisplayTs + 12) % 224);
+        int line = emuDisplayTs / 224;
+        int ts = ((emuDisplayTs - 4) % 224);
         
         switch (emuDisplayTsTable[line][ts]) {
             case kDisplayRetrace:
@@ -577,7 +580,7 @@ static void coreMemoryWrite(unsigned short address, unsigned char data, int tsta
     {
         return;
     }
-    updateScreenWithTStates((core->GetTStates() + 4) - emuDisplayTs);
+    updateScreenWithTStates(core->GetTStates() + 4 - emuDisplayTs);
     memory[address] = data;
 }
 
@@ -711,7 +714,7 @@ static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
     // +---+---+---+---+---+-----------+
     if (!(address & 0x01))
     {
-        updateScreenWithTStates((core->GetTStates() + 2 ) - emuDisplayTs);
+        updateScreenWithTStates(core->GetTStates() - emuDisplayTs);
 
         audioEar = (data & 0x10) >> 4;
         audioMic = (data & 0x08) >> 3;
@@ -741,10 +744,10 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
         memoryContentionTable[i] = 0;
         ioContentionTable[i] = 0;
         
-        if (i >= 14335)
+        if (i >= tsToOrigin)
         {
-            int line = (i - 14335) / tsPerLine;
-            int ts = (i - 14335) % tsPerLine;
+            int line = (i - tsToOrigin) / tsPerLine;
+            int ts = (i - tsToOrigin) % tsPerLine;
             
             if (line < 192 && ts < 128)
             {
