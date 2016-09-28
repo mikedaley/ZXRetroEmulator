@@ -104,7 +104,7 @@ bool            emuShouldInterpolate;
 // Image buffer array buffer, its length and current index into the buffer used when drawing
 unsigned char   *emuDisplayBuffer;
 unsigned int    emuDisplayBufferLength;
-int             emuDisplayBufferIndex;
+unsigned int    emuDisplayBufferIndex;
 
 // Width and height of the image used to display the emulated screen
 int             emuDisplayPxWidth;
@@ -120,17 +120,15 @@ int             emuBottomBorderPx;
 
 // Tracks the number of tStates used for drawing the screen. This is compared with the number of tStates that have passed
 // in the current frame so that the right number of 8x1 screen chunks are drawn
-int             emuDisplayTs;
-int             emuCurrentLineStartTs;
-int             emuDisplayTsOffset;
+uint            emuDisplayTs;
 
 // Holds the current pixel and attribute line addresses when rendering the screen
-int             pixelAddress;
-int             attrAddress;
+unsigned int    pixelAddress;
+unsigned int    attrAddress;
 
 uint16          emuTsLine[192];
 uint8           emuDisplayTsTable[312][224];
-int             emuCurrentFrameTs;
+unsigned int    emuCurrentFrameTs;
 
 //*** Audio
 double          audioBeeperValue;
@@ -232,8 +230,6 @@ unsigned char keyboardMap[8];
         emuDisplayPxWidth = 256 + 8 * (emuLeftBorderPx + emuRightBorderPx);
         emuDisplayPxHeight = 192 + emuTopBorderPx + emuBottomBorderPx;
         
-        emuDisplayTsOffset = 4;
-        
         [self resetFrame];
         
         // Setup the display buffer and length used to store the output from the emulator
@@ -299,7 +295,7 @@ unsigned char keyboardMap[8];
 {
     // Reset display
     emuDisplayBufferIndex = 0;
-    emuDisplayTs = 16;
+    emuDisplayTs = 0;
     
     // Reset audio
     audioBufferIndex = 0;
@@ -414,12 +410,12 @@ unsigned char keyboardMap[8];
 
 static void updateScreenWithTStates(int numberTs)
 {
-    numberTs = (numberTs / 4) + 4;
+    numberTs = (numberTs / 4);
     
     while (numberTs > 0)
     {
         int line = emuDisplayTs / 224;
-        int ts = ((emuDisplayTs - 4) % 224);
+        int ts = ((emuDisplayTs) % 224);
         
         switch (emuDisplayTsTable[line][ts]) {
             case kDisplayRetrace:
@@ -588,7 +584,7 @@ static void coreMemoryWrite(unsigned short address, unsigned char data, int tsta
     {
         return;
     }
-    updateScreenWithTStates(core->GetTStates() + 4 - emuDisplayTs);
+    updateScreenWithTStates(core->GetTStates() + 16 - emuDisplayTs);
     memory[address] = data;
 }
 
@@ -722,7 +718,7 @@ static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
     // +---+---+---+---+---+-----------+
     if (!(address & 0x01))
     {
-        updateScreenWithTStates(core->GetTStates() - emuDisplayTs);
+        updateScreenWithTStates(core->GetTStates() + 14 - emuDisplayTs);
 
         audioEar = (data & 0x10) >> 4;
         audioMic = (data & 0x08) >> 3;
@@ -775,18 +771,16 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
 // This routine works out what would be on the ULA bus for a given t-state and returns the result
 static unsigned char floatingBus()
 {
-    // Calculate the current screen line and tState within that screen line
     int cpuTs = core->GetTStates();
     int currentDisplayLine = (cpuTs / tsPerLine);
     int currentTs = ((cpuTs - 1) % tsPerLine);
 
     // If the line and tState are within the bitmap of the screen then grab the
-    // pixel of attribute value
+    // pixel or attribute value
     if (currentDisplayLine >= (pxTopBorder + pxVerticalBlank)
         && currentDisplayLine < (pxVerticalDisplay + pxTopBorder + pxVerticalBlank)
         && currentTs < tsHorizontalDisplay)
     {
-        // Use the floatingBusTable to decide if a pixel or attribute value should be grabbed
         unsigned char ulaValueType = floatingBusTable[ currentTs & 0x07 ];
         
         int y = currentDisplayLine - (pxTopBorder + pxVerticalBlank);
@@ -810,7 +804,7 @@ static unsigned char floatingBus()
 
 - (void)loadDefaultROM
 {
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"48" ofType:@"ROM"];
+    NSString *path = [[NSBundle mainBundle] pathForResource:@"ZXSpectrum48k" ofType:@"rom"];
     NSData *rom = [NSData dataWithContentsOfFile:path];
     
     const char *fileBytes = (const char*)[rom bytes];

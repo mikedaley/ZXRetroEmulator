@@ -105,10 +105,14 @@
     openPanel.canChooseDirectories = NO;
     openPanel.allowsMultipleSelection = NO;
     openPanel.allowedFileTypes = @[@"sna"];
-    if ([openPanel runModal] == NSModalResponseOK)
-    {
-        [self.machine loadSnapshotWithPath:openPanel.URLs[0].path];
-    }        
+    
+    [openPanel beginSheetModalForWindow:self.window completionHandler:^(NSInteger result) {
+        if (result == NSModalResponseOK)
+        {
+            [self.machine loadSnapshotWithPath:openPanel.URLs[0].path];
+        }
+    }];
+    
 }
 
 - (IBAction)toggleFilter:(id)sender

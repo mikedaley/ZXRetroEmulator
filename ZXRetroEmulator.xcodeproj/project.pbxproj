@@ -10,7 +10,7 @@
 		ED3650111D7AFA6D00A6383B /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = ED3650101D7AFA6D00A6383B /* AppDelegate.m */; };
 		ED3650141D7AFA6D00A6383B /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = ED3650131D7AFA6D00A6383B /* main.m */; };
 		ED3650161D7AFA6D00A6383B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ED3650151D7AFA6D00A6383B /* Assets.xcassets */; };
-		ED3650281D7AFADA00A6383B /* 48.ROM in Resources */ = {isa = PBXBuildFile; fileRef = ED3650271D7AFADA00A6383B /* 48.ROM */; };
+		ED3650281D7AFADA00A6383B /* 48.rom in Resources */ = {isa = PBXBuildFile; fileRef = ED3650271D7AFADA00A6383B /* 48.rom */; };
 		ED3650381D7AFAE400A6383B /* Z80Core.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ED36502A1D7AFAE400A6383B /* Z80Core.cpp */; };
 		ED3650391D7AFAE400A6383B /* Z80Core_MainOpcodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ED36502D1D7AFAE400A6383B /* Z80Core_MainOpcodes.cpp */; };
 		ED36503A1D7AFAE400A6383B /* Z80Core_CBOpcodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ED36502F1D7AFAE400A6383B /* Z80Core_CBOpcodes.cpp */; };
@@ -28,6 +28,7 @@
 		ED5A32C21D903DDD00BD2327 /* beep.sna in Resources */ = {isa = PBXBuildFile; fileRef = ED5A32C11D903DDD00BD2327 /* beep.sna */; };
 		ED5A32C51D90652100BD2327 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = ED5A32C31D90652100BD2327 /* MainMenu.xib */; };
 		ED740B721D9A84440016DFF4 /* ulatest48k.sna in Resources */ = {isa = PBXBuildFile; fileRef = ED740B711D9A84440016DFF4 /* ulatest48k.sna */; };
+		ED740B741D9AD13A0016DFF4 /* ZXSpectrum48k.rom in Resources */ = {isa = PBXBuildFile; fileRef = ED740B731D9AD13A0016DFF4 /* ZXSpectrum48k.rom */; };
 		EDAA47171D941E1300F3CE0D /* test1.sna in Resources */ = {isa = PBXBuildFile; fileRef = EDAA47161D941E1300F3CE0D /* test1.sna */; };
 /* End PBXBuildFile section */
 
@@ -38,7 +39,7 @@
 		ED3650131D7AFA6D00A6383B /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		ED3650151D7AFA6D00A6383B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		ED36501A1D7AFA6D00A6383B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		ED3650271D7AFADA00A6383B /* 48.ROM */ = {isa = PBXFileReference; lastKnownFileType = file; path = 48.ROM; sourceTree = "<group>"; };
+		ED3650271D7AFADA00A6383B /* 48.rom */ = {isa = PBXFileReference; lastKnownFileType = file; path = 48.rom; sourceTree = "<group>"; };
 		ED3650291D7AFAE400A6383B /* Z80Core.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Z80Core.h; sourceTree = "<group>"; };
 		ED36502A1D7AFAE400A6383B /* Z80Core.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Z80Core.cpp; sourceTree = "<group>"; };
 		ED36502B1D7AFAE400A6383B /* Z80CoreOpcodeTables.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Z80CoreOpcodeTables.h; sourceTree = "<group>"; };
@@ -71,6 +72,8 @@
 		ED5A32C11D903DDD00BD2327 /* beep.sna */ = {isa = PBXFileReference; lastKnownFileType = file; path = beep.sna; sourceTree = "<group>"; };
 		ED5A32C41D90652100BD2327 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		ED740B711D9A84440016DFF4 /* ulatest48k.sna */ = {isa = PBXFileReference; lastKnownFileType = file; path = ulatest48k.sna; sourceTree = "<group>"; };
+		ED740B731D9AD13A0016DFF4 /* ZXSpectrum48k.rom */ = {isa = PBXFileReference; lastKnownFileType = file; path = ZXSpectrum48k.rom; sourceTree = "<group>"; };
+		ED740B751D9BAA5E0016DFF4 /* ZXRetroEmulator.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ZXRetroEmulator.entitlements; sourceTree = "<group>"; };
 		EDAA47161D941E1300F3CE0D /* test1.sna */ = {isa = PBXFileReference; lastKnownFileType = file; path = test1.sna; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -106,6 +109,7 @@
 		ED36500E1D7AFA6D00A6383B /* ZXRetroEmulator */ = {
 			isa = PBXGroup;
 			children = (
+				ED740B751D9BAA5E0016DFF4 /* ZXRetroEmulator.entitlements */,
 				ED36504A1D7B21B100A6383B /* EmuApplication */,
 				ED3650201D7AFA7800A6383B /* ROMS */,
 				ED3650211D7AFA8800A6383B /* Z80 Core */,
@@ -134,7 +138,8 @@
 			children = (
 				EDAA47161D941E1300F3CE0D /* test1.sna */,
 				ED5A32C11D903DDD00BD2327 /* beep.sna */,
-				ED3650271D7AFADA00A6383B /* 48.ROM */,
+				ED3650271D7AFADA00A6383B /* 48.rom */,
+				ED740B731D9AD13A0016DFF4 /* ZXSpectrum48k.rom */,
 				ED740B711D9A84440016DFF4 /* ulatest48k.sna */,
 			);
 			name = ROMS;
@@ -259,6 +264,11 @@
 				TargetAttributes = {
 					ED36500B1D7AFA6D00A6383B = {
 						CreatedOnToolsVersion = 7.3.1;
+						SystemCapabilities = {
+							com.apple.Sandbox = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};
@@ -286,10 +296,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				ED3650161D7AFA6D00A6383B /* Assets.xcassets in Resources */,
+				ED740B741D9AD13A0016DFF4 /* ZXSpectrum48k.rom in Resources */,
 				ED5A32C51D90652100BD2327 /* MainMenu.xib in Resources */,
 				EDAA47171D941E1300F3CE0D /* test1.sna in Resources */,
 				ED3650471D7AFB6B00A6383B /* EmulationViewController.xib in Resources */,
-				ED3650281D7AFADA00A6383B /* 48.ROM in Resources */,
+				ED3650281D7AFADA00A6383B /* 48.rom in Resources */,
 				ED5A32C21D903DDD00BD2327 /* beep.sna in Resources */,
 				ED740B721D9A84440016DFF4 /* ulatest48k.sna in Resources */,
 			);
@@ -422,6 +433,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = ZXRetroEmulator/ZXRetroEmulator.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				INFOPLIST_FILE = ZXRetroEmulator/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
@@ -434,6 +446,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = ZXRetroEmulator/ZXRetroEmulator.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				INFOPLIST_FILE = ZXRetroEmulator/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";

@@ -190,7 +190,9 @@ int CZ80Core::Execute(int num_tstates, int int_t_states)
                         break;
                 }
             }
-        } else if (m_CPURegisters.TStates > int_t_states) {
+        }
+        else if (m_CPURegisters.TStates > int_t_states)
+        {
             m_CPURegisters.IntReq = false;
         }
         
@@ -237,7 +239,7 @@ int CZ80Core::Execute(int num_tstates, int int_t_states)
 			}
 			else
 			{
-				table = &DD_Opcodes;
+                table = &DD_Opcodes;
 			}
 			break;
 
@@ -271,9 +273,9 @@ int CZ80Core::Execute(int num_tstates, int int_t_states)
 			}
 			else
 			{
-				table = &FD_Opcodes;
-			}
-			break;
+                table = &FD_Opcodes;
+            }
+            break;
 		}
 
 		// We can now execute the instruction

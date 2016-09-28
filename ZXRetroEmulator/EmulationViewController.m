@@ -15,7 +15,7 @@
 
 @interface EmulationViewController ()
 
-@property (weak) AppDelegate *appDelegate;
+@property (strong) AppDelegate *appDelegate;
 
 @end
 
