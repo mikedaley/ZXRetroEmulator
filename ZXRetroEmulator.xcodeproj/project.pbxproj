@@ -30,6 +30,7 @@
 		ED740B721D9A84440016DFF4 /* ulatest48k.sna in Resources */ = {isa = PBXBuildFile; fileRef = ED740B711D9A84440016DFF4 /* ulatest48k.sna */; };
 		ED740B741D9AD13A0016DFF4 /* ZXSpectrum48k.rom in Resources */ = {isa = PBXBuildFile; fileRef = ED740B731D9AD13A0016DFF4 /* ZXSpectrum48k.rom */; };
 		EDAA47171D941E1300F3CE0D /* test1.sna in Resources */ = {isa = PBXBuildFile; fileRef = EDAA47161D941E1300F3CE0D /* test1.sna */; };
+		EDAD7B4E1D9D86EF00C04D7A /* shock.sna in Resources */ = {isa = PBXBuildFile; fileRef = EDAD7B4D1D9D86EF00C04D7A /* shock.sna */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -75,6 +76,7 @@
 		ED740B731D9AD13A0016DFF4 /* ZXSpectrum48k.rom */ = {isa = PBXFileReference; lastKnownFileType = file; path = ZXSpectrum48k.rom; sourceTree = "<group>"; };
 		ED740B751D9BAA5E0016DFF4 /* ZXRetroEmulator.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ZXRetroEmulator.entitlements; sourceTree = "<group>"; };
 		EDAA47161D941E1300F3CE0D /* test1.sna */ = {isa = PBXFileReference; lastKnownFileType = file; path = test1.sna; sourceTree = "<group>"; };
+		EDAD7B4D1D9D86EF00C04D7A /* shock.sna */ = {isa = PBXFileReference; lastKnownFileType = file; path = shock.sna; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -140,6 +142,7 @@
 				ED5A32C11D903DDD00BD2327 /* beep.sna */,
 				ED3650271D7AFADA00A6383B /* 48.rom */,
 				ED740B731D9AD13A0016DFF4 /* ZXSpectrum48k.rom */,
+				EDAD7B4D1D9D86EF00C04D7A /* shock.sna */,
 				ED740B711D9A84440016DFF4 /* ulatest48k.sna */,
 			);
 			name = ROMS;
@@ -296,6 +299,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				ED3650161D7AFA6D00A6383B /* Assets.xcassets in Resources */,
+				EDAD7B4E1D9D86EF00C04D7A /* shock.sna in Resources */,
 				ED740B741D9AD13A0016DFF4 /* ZXSpectrum48k.rom in Resources */,
 				ED5A32C51D90652100BD2327 /* MainMenu.xib in Resources */,
 				EDAA47171D941E1300F3CE0D /* test1.sna in Resources */,

@@ -323,7 +323,7 @@ unsigned char keyboardMap[8];
     {
         updateScreenWithTStates(core->GetTStates() - emuDisplayTs);
         
-        core->ResetTStates( tsPerFrame );
+        core->ResetTStates( core->GetTStates() );
         core->SignalInterrupt();
         
         [self generateImage];
@@ -332,8 +332,6 @@ unsigned char keyboardMap[8];
             self.emulationView.layer.contents = self.imageRef;            
         });
         frameCounter++;
-        emuCurrentFrameTs -= tsPerFrame;
-
     }
     
     return tsCPU;
@@ -415,13 +413,15 @@ static void updateScreenWithTStates(int numberTs)
     while (numberTs > 0)
     {
         int line = emuDisplayTs / 224;
-        int ts = ((emuDisplayTs) % 224);
+        int ts = emuDisplayTs % 224;
         
         switch (emuDisplayTsTable[line][ts]) {
             case kDisplayRetrace:
                 break;
                 
             case kDisplayBorder:
+                
+                if (line 
                 for (int i = 0; i < 8; i++)
                 {
                     emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].r;
@@ -718,7 +718,7 @@ static void coreIOWrite(unsigned short address, unsigned char data, int tstates)
     // +---+---+---+---+---+-----------+
     if (!(address & 0x01))
     {
-        updateScreenWithTStates(core->GetTStates() + 14 - emuDisplayTs);
+        updateScreenWithTStates(core->GetTStates() - emuDisplayTs + 14);
 
         audioEar = (data & 0x10) >> 4;
         audioMic = (data & 0x08) >> 3;
