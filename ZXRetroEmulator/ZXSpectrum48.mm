@@ -420,8 +420,6 @@ static void updateScreenWithTStates(int numberTs)
                 break;
                 
             case kDisplayBorder:
-                
-                if (line 
                 for (int i = 0; i < 8; i++)
                 {
                     emuDisplayBuffer[emuDisplayBufferIndex++] = pallette[borderColour].r;
