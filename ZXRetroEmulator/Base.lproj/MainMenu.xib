@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="11201" systemVersion="16B2327e" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="11201" systemVersion="16B2333a" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
     <dependencies>
         <deployment identifier="macosx"/>
         <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="11201"/>
@@ -21,11 +21,11 @@
         <customObject id="YLy-65-1bz" customClass="NSFontManager"/>
         <menu title="Main Menu" systemMenu="main" id="AYu-sK-qS6">
             <items>
-                <menuItem title="ZXRetroEmulator" id="1Xt-HY-uBw">
+                <menuItem title="SpectREM" id="1Xt-HY-uBw">
                     <modifierMask key="keyEquivalentModifierMask"/>
-                    <menu key="submenu" title="ZXRetroEmulator" systemMenu="apple" id="uQy-DD-JDr">
+                    <menu key="submenu" title="SpectREM" systemMenu="apple" id="uQy-DD-JDr">
                         <items>
-                            <menuItem title="About ZXRetroEmulator" id="5kV-Vb-QxS">
+                            <menuItem title="About SpectREM" id="5kV-Vb-QxS">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
                                     <action selector="orderFrontStandardAboutPanel:" target="-1" id="Exp-CZ-Vem"/>
@@ -57,7 +57,7 @@
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="kCx-OE-vgT"/>
-                            <menuItem title="Quit ZXRetroEmulator" keyEquivalent="q" id="4sb-4s-VLi">
+                            <menuItem title="Quit SpectREM" keyEquivalent="q" id="4sb-4s-VLi">
                                 <connections>
                                     <action selector="terminate:" target="-1" id="Te7-pn-YzF"/>
                                 </connections>
@@ -159,7 +159,12 @@
                             </menuItem>
                             <menuItem title="Toggle Linear/Nearest Filter" keyEquivalent="l" id="rFk-27-tu8">
                                 <connections>
-                                    <action selector="toggleFilter:" target="-1" id="cYT-mG-PQh"/>
+                                    <action selector="toggleFilter:" target="-1" id="Mwc-ul-GKx"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Toggle Border" keyEquivalent="b" id="Ya3-t6-p71">
+                                <connections>
+                                    <action selector="toggleBorder:" target="-1" id="Jma-OM-wW2"/>
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="nDY-jR-pgp"/>
@@ -181,6 +186,11 @@
                             <menuItem title="Size x 4" tag="8" keyEquivalent="4" id="GX4-Ev-gIT">
                                 <connections>
                                     <action selector="animateWindowSize:" target="-1" id="CRt-0M-VWo"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Size x 5" tag="10" keyEquivalent="5" id="2et-9G-yJM">
+                                <connections>
+                                    <action selector="animateWindowSize:" target="-1" id="iUB-kH-34a"/>
                                 </connections>
                             </menuItem>
                         </items>
@@ -215,7 +225,7 @@
                     <modifierMask key="keyEquivalentModifierMask"/>
                     <menu key="submenu" title="Help" systemMenu="help" id="F2S-fz-NVQ">
                         <items>
-                            <menuItem title="ZXRetroEmulator Help" keyEquivalent="?" id="FKE-Sm-Kum">
+                            <menuItem title="SpectREM Help" keyEquivalent="?" id="FKE-Sm-Kum">
                                 <connections>
                                     <action selector="showHelp:" target="-1" id="y7X-2Q-9no"/>
                                 </connections>
@@ -224,9 +234,9 @@
                     </menu>
                 </menuItem>
             </items>
-            <point key="canvasLocation" x="-732" y="-234"/>
+            <point key="canvasLocation" x="-939" y="-230"/>
         </menu>
-        <window title="ZXRetroEmulator" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" animationBehavior="default" id="QvC-M9-y7g">
+        <window title="SpectREM" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" animationBehavior="default" id="QvC-M9-y7g">
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
             <rect key="contentRect" x="84" y="219" width="585" height="472"/>
             <rect key="screenRect" x="0.0" y="0.0" width="2560" height="1417"/>
@@ -234,7 +244,7 @@
                 <rect key="frame" x="0.0" y="0.0" width="585" height="472"/>
                 <autoresizingMask key="autoresizingMask"/>
             </view>
-            <point key="canvasLocation" x="-739" y="179"/>
+            <point key="canvasLocation" x="-939" y="174"/>
         </window>
         <viewController id="hLm-wU-4RZ" userLabel="Emulation View Controller" customClass="EmulationViewController"/>
     </objects>

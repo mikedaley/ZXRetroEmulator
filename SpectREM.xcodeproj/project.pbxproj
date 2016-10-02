@@ -34,7 +34,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		ED36500C1D7AFA6D00A6383B /* ZXRetroEmulator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZXRetroEmulator.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		ED36500C1D7AFA6D00A6383B /* SpectREM.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SpectREM.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED36500F1D7AFA6D00A6383B /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		ED3650101D7AFA6D00A6383B /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		ED3650131D7AFA6D00A6383B /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
@@ -74,7 +74,7 @@
 		ED5A32C41D90652100BD2327 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		ED740B711D9A84440016DFF4 /* ulatest48k.sna */ = {isa = PBXFileReference; lastKnownFileType = file; path = ulatest48k.sna; sourceTree = "<group>"; };
 		ED740B731D9AD13A0016DFF4 /* ZXSpectrum48k.rom */ = {isa = PBXFileReference; lastKnownFileType = file; path = ZXSpectrum48k.rom; sourceTree = "<group>"; };
-		ED740B751D9BAA5E0016DFF4 /* ZXRetroEmulator.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ZXRetroEmulator.entitlements; sourceTree = "<group>"; };
+		ED740B751D9BAA5E0016DFF4 /* ZXRetroEmulator.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = ZXRetroEmulator.entitlements; path = ZXRetroEmulator/ZXRetroEmulator.entitlements; sourceTree = "<group>"; };
 		EDAA47161D941E1300F3CE0D /* test1.sna */ = {isa = PBXFileReference; lastKnownFileType = file; path = test1.sna; sourceTree = "<group>"; };
 		EDAD7B4D1D9D86EF00C04D7A /* shock.sna */ = {isa = PBXFileReference; lastKnownFileType = file; path = shock.sna; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -94,16 +94,17 @@
 		ED3650031D7AFA6D00A6383B = {
 			isa = PBXGroup;
 			children = (
+				EDE6EA401DA119DF00F4AD64 /* Entitlements */,
 				ED36500E1D7AFA6D00A6383B /* ZXRetroEmulator */,
 				ED36500D1D7AFA6D00A6383B /* Products */,
-				ED3650481D7B116E00A6383B /* QuartzCore.framework */,
+				EDE6EA411DA119FD00F4AD64 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
 		ED36500D1D7AFA6D00A6383B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				ED36500C1D7AFA6D00A6383B /* ZXRetroEmulator.app */,
+				ED36500C1D7AFA6D00A6383B /* SpectREM.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -111,7 +112,6 @@
 		ED36500E1D7AFA6D00A6383B /* ZXRetroEmulator */ = {
 			isa = PBXGroup;
 			children = (
-				ED740B751D9BAA5E0016DFF4 /* ZXRetroEmulator.entitlements */,
 				ED36504A1D7B21B100A6383B /* EmuApplication */,
 				ED3650201D7AFA7800A6383B /* ROMS */,
 				ED3650211D7AFA8800A6383B /* Z80 Core */,
@@ -236,12 +236,28 @@
 			name = "Audio Core";
 			sourceTree = "<group>";
 		};
+		EDE6EA401DA119DF00F4AD64 /* Entitlements */ = {
+			isa = PBXGroup;
+			children = (
+				ED740B751D9BAA5E0016DFF4 /* ZXRetroEmulator.entitlements */,
+			);
+			name = Entitlements;
+			sourceTree = "<group>";
+		};
+		EDE6EA411DA119FD00F4AD64 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				ED3650481D7B116E00A6383B /* QuartzCore.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		ED36500B1D7AFA6D00A6383B /* ZXRetroEmulator */ = {
+		ED36500B1D7AFA6D00A6383B /* SpectREM */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = ED36501D1D7AFA6D00A6383B /* Build configuration list for PBXNativeTarget "ZXRetroEmulator" */;
+			buildConfigurationList = ED36501D1D7AFA6D00A6383B /* Build configuration list for PBXNativeTarget "SpectREM" */;
 			buildPhases = (
 				ED3650081D7AFA6D00A6383B /* Sources */,
 				ED3650091D7AFA6D00A6383B /* Frameworks */,
@@ -251,9 +267,9 @@
 			);
 			dependencies = (
 			);
-			name = ZXRetroEmulator;
+			name = SpectREM;
 			productName = ZXRetroEmulator;
-			productReference = ED36500C1D7AFA6D00A6383B /* ZXRetroEmulator.app */;
+			productReference = ED36500C1D7AFA6D00A6383B /* SpectREM.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -275,7 +291,7 @@
 					};
 				};
 			};
-			buildConfigurationList = ED3650071D7AFA6D00A6383B /* Build configuration list for PBXProject "ZXRetroEmulator" */;
+			buildConfigurationList = ED3650071D7AFA6D00A6383B /* Build configuration list for PBXProject "SpectREM" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -288,7 +304,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				ED36500B1D7AFA6D00A6383B /* ZXRetroEmulator */,
+				ED36500B1D7AFA6D00A6383B /* SpectREM */,
 			);
 		};
 /* End PBXProject section */
@@ -441,7 +457,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				INFOPLIST_FILE = ZXRetroEmulator/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.71squared.ZXRetroEmulator;
+				PRODUCT_BUNDLE_IDENTIFIER = com.71squared.SpectREM;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -454,7 +470,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				INFOPLIST_FILE = ZXRetroEmulator/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.71squared.ZXRetroEmulator;
+				PRODUCT_BUNDLE_IDENTIFIER = com.71squared.SpectREM;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -462,7 +478,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		ED3650071D7AFA6D00A6383B /* Build configuration list for PBXProject "ZXRetroEmulator" */ = {
+		ED3650071D7AFA6D00A6383B /* Build configuration list for PBXProject "SpectREM" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				ED36501B1D7AFA6D00A6383B /* Debug */,
@@ -471,7 +487,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		ED36501D1D7AFA6D00A6383B /* Build configuration list for PBXNativeTarget "ZXRetroEmulator" */ = {
+		ED36501D1D7AFA6D00A6383B /* Build configuration list for PBXNativeTarget "SpectREM" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				ED36501E1D7AFA6D00A6383B /* Debug */,

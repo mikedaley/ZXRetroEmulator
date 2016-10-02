@@ -26,6 +26,8 @@
 @property (assign) NSInteger viewHeight;
 @property (assign) NSInteger viewScale;
 
+@property (assign) BOOL borderVisible;
+
 @end
 
 #pragma mark - Implementation 
@@ -34,17 +36,20 @@
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
-    _viewWidth = 32 + 256 + 64;
-    _viewHeight = 56 + 192 + 56 ;
+    
+    _borderVisible = YES;
     _viewScale = 2.0;
+    _viewWidth = 32 + 256 + 44;
+    _viewHeight = 32 + 192 + 32 ;
+    
     [self setupViews];
     
     _machine = [[ZXSpectrum48 alloc] initWithEmulationScreenView:_emulationViewController.view];
     _emulationViewController.delegate = _machine;
     [_machine start];
     
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"shock" ofType:@"sna"];
-    [_machine loadSnapshotWithPath:path];
+//    NSString *path = [[NSBundle mainBundle] pathForResource:@"shock" ofType:@"sna"];
+//    [_machine loadSnapshotWithPath:path];
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification
@@ -82,14 +87,19 @@
 
 - (IBAction)animateWindowSize:(id)sender
 {
+    NSMenuItem *menuItem = sender;
+    if (menuItem)
+    {
+        self.viewScale = (float)menuItem.tag;
+    }
+    
     [NSAnimationContext runAnimationGroup:^(NSAnimationContext * _Nonnull context)
     {
         context.duration = 0.25;
         context.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
         
-        NSMenuItem *menuItem = sender;
-        self.windowWidthConstraint.animator.constant = _viewWidth * menuItem.tag / 2.0;
-        self.windowHeightConstraint.animator.constant = _viewHeight * menuItem.tag / 2.0;
+        self.windowWidthConstraint.animator.constant = _viewWidth * self.viewScale / 2.0;
+        self.windowHeightConstraint.animator.constant = _viewHeight * self.viewScale / 2.0;
         
     } completionHandler:nil];
 }
@@ -106,12 +116,14 @@
     openPanel.allowsMultipleSelection = NO;
     openPanel.allowedFileTypes = @[@"sna"];
     
-    [openPanel beginSheetModalForWindow:self.window completionHandler:^(NSInteger result) {
-        if (result == NSModalResponseOK)
-        {
-            [self.machine loadSnapshotWithPath:openPanel.URLs[0].path];
-        }
-    }];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [openPanel beginSheetModalForWindow:self.window completionHandler:^(NSInteger result) {
+            if (result == NSModalResponseOK)
+            {
+                [self.machine loadSnapshotWithPath:openPanel.URLs[0].path];
+            }
+        }];
+    });
     
 }
 
@@ -124,6 +136,26 @@
     else
     {
         _emulationViewController.view.layer.magnificationFilter = kCAFilterNearest;
+    }
+}
+
+- (IBAction)toggleBorder:(id)sender
+{
+    if (self.borderVisible)
+    {
+        _viewWidth = 320;
+        _viewHeight = 256;
+        [self animateWindowSize:nil];
+        [self.emulationViewController hideBorder];
+        self.borderVisible = NO;
+    }
+    else
+    {
+        _viewWidth = 32 + 256 + 32;
+        _viewHeight = 32 + 192 + 32 ;
+        [self animateWindowSize:nil];
+        [self.emulationViewController showBorder];
+        self.borderVisible = YES;
     }
 }
 

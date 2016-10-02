@@ -2,6 +2,6 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "self:ZXRetroEmulator.xcodeproj">
+      location = "self:/Users/mikedaley/Documents/Source/ZXRetroEmulator/SpectREM.xcodeproj">
    </FileRef>
 </Workspace>

@@ -12,4 +12,9 @@
 
 @property (strong) id delegate;
 
+#pragma mark - Methods
+
+- (void)hideBorder;
+- (void)showBorder;
+
 @end

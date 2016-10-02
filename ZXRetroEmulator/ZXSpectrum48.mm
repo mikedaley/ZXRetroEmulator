@@ -769,9 +769,9 @@ static void coreIOContention(unsigned short address, unsigned int tstates, int p
 // This routine works out what would be on the ULA bus for a given t-state and returns the result
 static unsigned char floatingBus()
 {
-    int cpuTs = core->GetTStates();
+    int cpuTs = core->GetTStates() - 1;
     int currentDisplayLine = (cpuTs / tsPerLine);
-    int currentTs = ((cpuTs - 1) % tsPerLine);
+    int currentTs = (cpuTs % tsPerLine);
 
     // If the line and tState are within the bitmap of the screen then grab the
     // pixel or attribute value
@@ -782,7 +782,7 @@ static unsigned char floatingBus()
         unsigned char ulaValueType = floatingBusTable[ currentTs & 0x07 ];
         
         int y = currentDisplayLine - (pxTopBorder + pxVerticalBlank);
-        int x = currentTs / 4;
+        int x = currentTs >> 2;
         
         if (ulaValueType == Pixel)
         {

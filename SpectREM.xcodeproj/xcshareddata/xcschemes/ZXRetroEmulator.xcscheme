@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "0800"
+   LastUpgradeVersion = "0730"
    version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "ED36500B1D7AFA6D00A6383B"
-               BuildableName = "ZXRetroEmulator.app"
-               BlueprintName = "ZXRetroEmulator"
-               ReferencedContainer = "container:ZXRetroEmulator.xcodeproj">
+               BuildableName = "SpectREM.app"
+               BlueprintName = "SpectREM"
+               ReferencedContainer = "container:SpectREM.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "ED36500B1D7AFA6D00A6383B"
-            BuildableName = "ZXRetroEmulator.app"
-            BlueprintName = "ZXRetroEmulator"
-            ReferencedContainer = "container:ZXRetroEmulator.xcodeproj">
+            BuildableName = "SpectREM.app"
+            BlueprintName = "SpectREM"
+            ReferencedContainer = "container:SpectREM.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <AdditionalOptions>
@@ -56,12 +56,17 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "ED36500B1D7AFA6D00A6383B"
-            BuildableName = "ZXRetroEmulator.app"
-            BlueprintName = "ZXRetroEmulator"
-            ReferencedContainer = "container:ZXRetroEmulator.xcodeproj">
+            BuildableName = "SpectREM.app"
+            BlueprintName = "SpectREM"
+            ReferencedContainer = "container:SpectREM.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <AdditionalOptions>
+         <AdditionalOption
+            key = "NSZombieEnabled"
+            value = "YES"
+            isEnabled = "YES">
+         </AdditionalOption>
       </AdditionalOptions>
    </LaunchAction>
    <ProfileAction
@@ -75,9 +80,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "ED36500B1D7AFA6D00A6383B"
-            BuildableName = "ZXRetroEmulator.app"
-            BlueprintName = "ZXRetroEmulator"
-            ReferencedContainer = "container:ZXRetroEmulator.xcodeproj">
+            BuildableName = "SpectREM.app"
+            BlueprintName = "SpectREM"
+            ReferencedContainer = "container:SpectREM.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
