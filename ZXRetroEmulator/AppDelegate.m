@@ -111,6 +111,7 @@
 
 - (IBAction)openDocument:(id)sender
 {
+    _machine.paused = YES;
     NSOpenPanel *openPanel = [NSOpenPanel new];
     openPanel.canChooseDirectories = NO;
     openPanel.allowsMultipleSelection = NO;
@@ -118,6 +119,7 @@
     
     dispatch_async(dispatch_get_main_queue(), ^{
         [openPanel beginSheetModalForWindow:self.window completionHandler:^(NSInteger result) {
+            self.machine.paused = NO;
             if (result == NSModalResponseOK)
             {
                 [self.machine loadSnapshotWithPath:openPanel.URLs[0].path];

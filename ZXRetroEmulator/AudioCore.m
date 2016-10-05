@@ -176,7 +176,7 @@ static OSStatus renderAudio(void *inRefCon,AudioUnitRenderActionFlags *ioActionF
     // Check if we have used a frames worth of buffer storage.
     if ([audioCore.queue used] < (samplesPerFrame << 1))
     {
-        dispatch_async(audioCore.emulationQueue, ^
+        dispatch_async(dispatch_get_main_queue(), ^
         {
             [audioCore.machine doFrame];
         });

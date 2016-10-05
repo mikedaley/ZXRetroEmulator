@@ -21,7 +21,7 @@
 @property (strong) dispatch_queue_t emulationQueue;
 @property (strong) dispatch_source_t emulationTimer;
 @property (assign) CGColorSpaceRef colourSpace;
-@property (nonatomic, strong) id imageRef;
+@property (strong) id imageRef;
 @property (strong) NSString *snapshotPath;
 
 @end
@@ -58,12 +58,12 @@ CZ80Core *core;
 unsigned char memory[64 * 1024];
 
 // Memory and IO contention tables
-unsigned char   contentionValues[8] = {6, 5, 4, 3, 2, 1, 0, 0};
+unsigned char   contentionValues[8] = { 6, 5, 4, 3, 2, 1, 0, 0 };
 unsigned char   memoryContentionTable[kTstatesPerFrame];
 unsigned char   ioContentionTable[kTstatesPerFrame];
 
 // Floating bus
-unsigned char   floatingBusTable[8] = {0, 0, 1, 2, 1, 2, 0, 0};
+unsigned char   floatingBusTable[8] = { 0, 0, 1, 2, 1, 2, 0, 0 };
 typedef enum : unsigned char {
     Pixel = 1,
     Attribute = 2
@@ -127,7 +127,7 @@ unsigned int    pixelAddress;
 unsigned int    attrAddress;
 
 uint16          emuTsLine[192];
-uint8           emuDisplayTsTable[312][224];
+uint8           emuDisplayTsTable[313][225];
 unsigned int    emuCurrentFrameTs;
 
 //*** Audio
@@ -177,7 +177,7 @@ PixelData pallette[] = {
 };
 
 // Keyboard matrix data
-unsigned char keyboardMap[8];
+static unsigned char keyboardMap[8];
 
 #pragma mark - Implementation
 
@@ -241,7 +241,7 @@ unsigned char keyboardMap[8];
         float fps = 50;
         
         audioSampleRate = 192000;
-        audioBufferSize = (audioSampleRate / fps) * 4;
+        audioBufferSize = (audioSampleRate / fps) * 6;
         _audioBuffer = (int16_t *)malloc(audioBufferSize);
         audioTsStep = tsPerFrame / (audioSampleRate / fps);
         
@@ -256,6 +256,8 @@ unsigned char keyboardMap[8];
                                            framesPerSecond:fps
                                             emulationQueue:_emulationQueue
                                                    machine:self];
+        
+        _paused = NO;
     }
     return self;
 }
@@ -317,6 +319,7 @@ unsigned char keyboardMap[8];
 - (int)step
 {
     int tsCPU = core->Execute(1, 32);
+    
     [self updateAudioWithTStates:tsCPU];
 
     if (core->GetTStates() >= tsPerFrame )
@@ -339,8 +342,11 @@ unsigned char keyboardMap[8];
 
 - (void)doFrame
 {
-    dispatch_async(_emulationQueue, ^
-    {
+
+    if (self.paused) return;
+    
+//    dispatch_async(_emulationQueue, ^
+//    {
         switch (event)
         {
             case None:
@@ -363,7 +369,7 @@ unsigned char keyboardMap[8];
         
         [self resetFrame];
         [self generateFrame];
-    });
+//    });
 }
 
 #pragma mark - Audio
@@ -388,8 +394,8 @@ unsigned char keyboardMap[8];
             audioBeeperValue += (beeperLevel * delta1);
             
             // Load the buffer with the sample for both left and right channels
-            _audioBuffer[ audioBufferIndex++ ] = (int16_t)(audioBeeperValue * 512);
-            _audioBuffer[ audioBufferIndex++ ] = (int16_t)(audioBeeperValue * 512);
+            _audioBuffer[ audioBufferIndex++ ] = (int16_t)(audioBeeperValue * 384);
+            _audioBuffer[ audioBufferIndex++ ] = (int16_t)(audioBeeperValue * 384);
             
             // Quantize for the next sample
             audioBeeperValue = (beeperLevel * delta2);
@@ -412,8 +418,8 @@ static void updateScreenWithTStates(int numberTs)
     
     while (numberTs > 0)
     {
-        int line = emuDisplayTs / 224;
-        int ts = emuDisplayTs % 224;
+        int line = emuDisplayTs / tsPerLine;
+        int ts = emuDisplayTs % tsPerLine;
         
         switch (emuDisplayTsTable[line][ts]) {
             case kDisplayRetrace:
@@ -475,7 +481,7 @@ static void updateScreenWithTStates(int numberTs)
                 break;
         }
 
-        emuDisplayTs += 4;
+        emuDisplayTs += tsPerChar;
 
         numberTs--;
     }
@@ -646,7 +652,7 @@ static unsigned char coreIORead(unsigned short address, int tstates)
     }
     
     // Default return value
-    int result = 0xff;
+    __block int result = 0xff;
     
     // Check to see if any keys have been pressed
     for (int i = 0; i < 8; i++)
