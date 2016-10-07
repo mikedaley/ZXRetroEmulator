@@ -18,6 +18,7 @@
 // Buffer used to hold the sound samples generated for each emulation frame
 @property (assign) int16_t *audioBuffer;
 @property (strong) AudioCore *audioCore;
+@property (strong) dispatch_queue_t emulationQueue;
 
 @property (assign) BOOL paused;
 

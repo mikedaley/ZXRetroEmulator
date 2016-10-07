@@ -18,8 +18,6 @@
 
 // Emulation queue and timer
 @property (strong) NSView *emulationView;
-@property (strong) dispatch_queue_t emulationQueue;
-@property (strong) dispatch_source_t emulationTimer;
 @property (assign) CGColorSpaceRef colourSpace;
 @property (strong) id imageRef;
 @property (strong) NSString *snapshotPath;
@@ -342,11 +340,8 @@ static unsigned char keyboardMap[8];
 
 - (void)doFrame
 {
-
-    if (self.paused) return;
-    
-//    dispatch_async(_emulationQueue, ^
-//    {
+    dispatch_async(self.emulationQueue, ^
+    {
         switch (event)
         {
             case None:
@@ -369,7 +364,7 @@ static unsigned char keyboardMap[8];
         
         [self resetFrame];
         [self generateFrame];
-//    });
+    });
 }
 
 #pragma mark - Audio
@@ -823,8 +818,10 @@ static unsigned char floatingBus()
 
 - (void)loadSnapshotWithPath:(NSString *)path
 {
-    self.snapshotPath = path;
-    event = Snapshot;
+    dispatch_sync(self.emulationQueue, ^{
+        self.snapshotPath = path;
+        event = Snapshot;        
+    });
 }
 
 - (void)loadSnapshot
@@ -917,7 +914,9 @@ static unsigned char floatingBus()
                 {
                     if (keyboardLookup[i].keyCode == theEvent.keyCode)
                     {
-                        keyboardMap[keyboardLookup[i].mapEntry] &= ~(1 << keyboardLookup[i].mapBit);
+                        dispatch_sync(self.emulationQueue, ^{
+                            keyboardMap[keyboardLookup[i].mapEntry] &= ~(1 << keyboardLookup[i].mapBit);
+                        });
                         break;
                     }
                 }
@@ -962,7 +961,9 @@ static unsigned char floatingBus()
                 {
                     if (keyboardLookup[i].keyCode == theEvent.keyCode)
                     {
-                        keyboardMap[keyboardLookup[i].mapEntry] |= (1 << keyboardLookup[i].mapBit);
+                        dispatch_sync(self.emulationQueue, ^{
+                            keyboardMap[keyboardLookup[i].mapEntry] |= (1 << keyboardLookup[i].mapBit);
+                        });
                         break;
                     }
                 }
@@ -975,47 +976,49 @@ static unsigned char floatingBus()
 {
     if (!(theEvent.modifierFlags & NSCommandKeyMask))
     {
-        switch (theEvent.keyCode)
-        {
-            case 58: // Alt Right - This puts the keyboard into extended mode in a single keypress
-            case 61: // Alt Left
-                if (theEvent.modifierFlags & NSAlternateKeyMask)
-                {
-                    keyboardMap[0] &= ~0x01;
-                    keyboardMap[7] &= ~0x02;
-                }
-                else
-                {
-                    keyboardMap[0] |= 0x01;
-                    keyboardMap[7] |= 0x02;
-                }
-                break;
-                
-            case 56: // Left Shift
-            case 60: // Right Shift
-                if (theEvent.modifierFlags & NSShiftKeyMask)
-                {
-                    keyboardMap[0] &= ~0x01;
-                }
-                else
-                {
-                    keyboardMap[0] |= 0x01;
-                }
-                break;
-                
-            case 59: // Control
-                if (theEvent.modifierFlags & NSControlKeyMask)
-                {
-                    keyboardMap[7] &= ~0x02;
-                }
-                else
-                {
-                    keyboardMap[7] |= 0x02;
-                }
-                
-            default:
-                break;
-        }
+        dispatch_sync(self.emulationQueue, ^{
+            switch (theEvent.keyCode)
+            {
+                case 58: // Alt Right - This puts the keyboard into extended mode in a single keypress
+                case 61: // Alt Left
+                    if (theEvent.modifierFlags & NSAlternateKeyMask)
+                    {
+                        keyboardMap[0] &= ~0x01;
+                        keyboardMap[7] &= ~0x02;
+                    }
+                    else
+                    {
+                        keyboardMap[0] |= 0x01;
+                        keyboardMap[7] |= 0x02;
+                    }
+                    break;
+                    
+                case 56: // Left Shift
+                case 60: // Right Shift
+                    if (theEvent.modifierFlags & NSShiftKeyMask)
+                    {
+                        keyboardMap[0] &= ~0x01;
+                    }
+                    else
+                    {
+                        keyboardMap[0] |= 0x01;
+                    }
+                    break;
+                    
+                case 59: // Control
+                    if (theEvent.modifierFlags & NSControlKeyMask)
+                    {
+                        keyboardMap[7] &= ~0x02;
+                    }
+                    else
+                    {
+                        keyboardMap[7] |= 0x02;
+                    }
+                    
+                default:
+                    break;
+            }
+        });
     }
 }
 

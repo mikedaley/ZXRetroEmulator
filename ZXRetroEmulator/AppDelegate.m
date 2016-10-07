@@ -38,7 +38,7 @@
 {
     
     _borderVisible = YES;
-    _viewScale = 2.0;
+    _viewScale = 4.0;
     _viewWidth = 32 + 256 + 44;
     _viewHeight = 32 + 192 + 32 ;
     
@@ -68,8 +68,8 @@
     
     NSDictionary *views = @{ @"emulationDisplayView" : _emulationViewController.view };
     
-    _windowWidthConstraint = [NSLayoutConstraint constraintWithItem:_emulationViewController.view attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeWidth multiplier:1.0 constant:_viewWidth * _viewScale];
-    _windowHeightConstraint = [NSLayoutConstraint constraintWithItem:_emulationViewController.view attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeHeight multiplier:1.0 constant:_viewHeight * _viewScale];
+    _windowWidthConstraint = [NSLayoutConstraint constraintWithItem:_emulationViewController.view attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeWidth multiplier:1.0 constant:_viewWidth * (_viewScale / 2)];
+    _windowHeightConstraint = [NSLayoutConstraint constraintWithItem:_emulationViewController.view attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeHeight multiplier:1.0 constant:_viewHeight * (_viewScale / 2)];
     
     [_window.contentView addConstraint:_windowWidthConstraint];
     [_window.contentView addConstraint:_windowHeightConstraint];
@@ -98,20 +98,21 @@
         context.duration = 0.25;
         context.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
         
-        self.windowWidthConstraint.animator.constant = _viewWidth * self.viewScale / 2.0;
-        self.windowHeightConstraint.animator.constant = _viewHeight * self.viewScale / 2.0;
+        self.windowWidthConstraint.animator.constant = _viewWidth * (self.viewScale / 2.0);
+        self.windowHeightConstraint.animator.constant = _viewHeight * (self.viewScale / 2.0);
         
     } completionHandler:nil];
 }
 
 - (IBAction)machineReset:(id)sender
 {
-    [self.machine reset];
+    dispatch_sync(self.machine.emulationQueue, ^{
+        [self.machine reset];
+    });
 }
 
 - (IBAction)openDocument:(id)sender
 {
-    _machine.paused = YES;
     NSOpenPanel *openPanel = [NSOpenPanel new];
     openPanel.canChooseDirectories = NO;
     openPanel.allowsMultipleSelection = NO;
@@ -119,7 +120,6 @@
     
     dispatch_async(dispatch_get_main_queue(), ^{
         [openPanel beginSheetModalForWindow:self.window completionHandler:^(NSInteger result) {
-            self.machine.paused = NO;
             if (result == NSModalResponseOK)
             {
                 [self.machine loadSnapshotWithPath:openPanel.URLs[0].path];
@@ -133,7 +133,7 @@
 {
     if (_emulationViewController.view.layer.magnificationFilter == kCAFilterNearest)
     {
-        _emulationViewController.view.layer.magnificationFilter = kCAFilterLinear;
+        _emulationViewController.view.layer.magnificationFilter = kCAFilterTrilinear;
     }
     else
     {
@@ -145,17 +145,11 @@
 {
     if (self.borderVisible)
     {
-        _viewWidth = 320;
-        _viewHeight = 256;
-        [self animateWindowSize:nil];
         [self.emulationViewController hideBorder];
         self.borderVisible = NO;
     }
     else
     {
-        _viewWidth = 32 + 256 + 32;
-        _viewHeight = 32 + 192 + 32 ;
-        [self animateWindowSize:nil];
         [self.emulationViewController showBorder];
         self.borderVisible = YES;
     }
