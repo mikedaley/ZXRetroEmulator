@@ -239,7 +239,7 @@ static unsigned char keyboardMap[8];
         float fps = 50;
         
         audioSampleRate = 192000;
-        audioBufferSize = (audioSampleRate / fps) * 6;
+        audioBufferSize = (audioSampleRate / fps) * 4;
         _audioBuffer = (int16_t *)malloc(audioBufferSize);
         audioTsStep = tsPerFrame / (audioSampleRate / fps);
         
@@ -254,8 +254,6 @@ static unsigned char keyboardMap[8];
                                            framesPerSecond:fps
                                             emulationQueue:_emulationQueue
                                                    machine:self];
-        
-        _paused = NO;
     }
     return self;
 }
@@ -354,7 +352,8 @@ static unsigned char keyboardMap[8];
                 
             case Snapshot:
                 [self reset];
-                [self loadSnapshot];
+//                [self loadSnapshot];
+                [self loadZ80Snapshot];
                 event = None;
                 break;
                 
@@ -818,6 +817,7 @@ static unsigned char floatingBus()
 
 - (void)loadSnapshotWithPath:(NSString *)path
 {
+    // This will be called from the main thread so it needs to by sync'd with the emulation queue
     dispatch_sync(self.emulationQueue, ^{
         self.snapshotPath = path;
         event = Snapshot;        
@@ -876,52 +876,223 @@ static unsigned char floatingBus()
     }
 }
 
+
+- (void)loadZ80Snapshot
+{
+
+    NSData *data = [NSData dataWithContentsOfFile:self.snapshotPath];
+    const char *fileBytes = (const char*)[data bytes];
+    
+    BOOL version1 = YES;
+    
+    // Decode the header
+    core->SetRegister(CZ80Core::eREG_A, (unsigned char)fileBytes[0]);
+    core->SetRegister(CZ80Core::eREG_F, (unsigned char)fileBytes[1]);
+    core->SetRegister(CZ80Core::eREG_BC, ((unsigned short *)&fileBytes[2])[0]);
+    core->SetRegister(CZ80Core::eREG_HL, ((unsigned short *)&fileBytes[2])[1]);
+    
+    unsigned short pc = ((unsigned short *)&fileBytes[6])[0];
+    
+    // Zero means it is a Version 2/3 snapshot
+    if (pc == 0)
+    {
+        version1 = NO;
+        pc = ((unsigned short *)&fileBytes[32])[0];
+    }
+    core->SetRegister(CZ80Core::eREG_PC, pc);
+    
+    NSLog(@"PC: %#2x", pc);
+    
+    core->SetRegister(CZ80Core::eREG_SP, ((unsigned short *)&fileBytes[8])[0]);
+    core->SetRegister(CZ80Core::eREG_I, (unsigned char)fileBytes[10]);
+    core->SetRegister(CZ80Core::eREG_R, (fileBytes[11] & 127) | ((fileBytes[12] & 1) << 7));
+    
+    // Info byte 12
+    unsigned char byte12 = fileBytes[12];
+    borderColour = (fileBytes[12] & 14) >> 1;
+    NSLog(@"RB7: %i Border: %i SamRom: %i Compressed: %i", byte12 & 1, (byte12 & 14) >> 1, byte12 & 16, byte12 & 32);
+    BOOL compressed = fileBytes[12] & 32;
+    
+    core->SetRegister(CZ80Core::eREG_DE, ((unsigned short *)&fileBytes[13])[0]);
+    core->SetRegister(CZ80Core::eREG_ALT_BC, ((unsigned short *)&fileBytes[13])[1]);
+    core->SetRegister(CZ80Core::eREG_ALT_DE, ((unsigned short *)&fileBytes[13])[2]);
+    core->SetRegister(CZ80Core::eREG_ALT_HL, ((unsigned short *)&fileBytes[13])[3]);
+    core->SetRegister(CZ80Core::eREG_ALT_A, (unsigned char)fileBytes[21]);
+    core->SetRegister(CZ80Core::eREG_ALT_F, (unsigned char)fileBytes[22]);
+    core->SetRegister(CZ80Core::eREG_IY, ((unsigned short *)&fileBytes[23])[0]);
+    core->SetRegister(CZ80Core::eREG_IX, ((unsigned short *)&fileBytes[23])[1]);
+    core->SetIFF1((unsigned char)fileBytes[27] & 1);
+    core->SetIFF2((unsigned char)fileBytes[28] & 1);
+    core->SetIMMode((unsigned char)fileBytes[29] & 3);
+
+    NSLog(@"IFF1: %i IM Mode: %i", (unsigned char)fileBytes[27] & 1, (unsigned char)fileBytes[29] & 3);
+    
+    // Deal with the extra data available in version 2 & 3 formats
+    int16_t additionHeaderBlockLength = 0;
+    if (!version1)
+    {
+        additionHeaderBlockLength = ((unsigned short *)&fileBytes[30])[0];
+    }
+    
+    if (version1)
+    {
+        if (!compressed)
+        {
+            NSLog(@"Version 1 not compressed");
+            int z80addr = 30;
+            for (int i= 16384; i < data.length + 16384; i++)
+            {
+                memory[i] = fileBytes[z80addr++];
+            }
+        }
+        else
+        {
+            NSLog(@"Version 1 compressed");
+            int filePtr = 30;
+            int memoryPtr = 16384;
+            NSUInteger unpackedLength = 48 * 1024;
+            
+            while (memoryPtr < unpackedLength + 16384)
+            {
+                unsigned char byte1 = fileBytes[filePtr];
+                unsigned char byte2 = fileBytes[filePtr + 1];
+                
+                if ((unpackedLength + 16384) - memoryPtr >= 2 &&
+                    byte1 == 0xed &&
+                    byte2 == 0xed)
+                {
+                    unsigned char count = fileBytes[filePtr + 2];
+                    unsigned char value = fileBytes[filePtr + 3];
+                    for (int i = 0; i < count; i++)
+                    {
+                        memory[memoryPtr++] = value;
+                    }
+                    filePtr += 4;
+                }
+                else
+                {
+                    memory[memoryPtr++] = fileBytes[filePtr++];
+                }
+            }
+        }
+    }
+    else
+    {
+        int offset = 32 + additionHeaderBlockLength;
+        
+        while (offset < data.length)
+        {
+            int compressedLength = ((unsigned short *)&fileBytes[offset])[0];
+            BOOL isCompressed = YES;
+            if (compressedLength == 0xffff)
+            {
+                compressedLength = 0x4000;
+                isCompressed = NO;
+            }
+            
+            int pageId = fileBytes[offset+2];
+            
+            
+        }
+        
+        
+        
+        if (!compressed)
+        {
+            NSLog(@"Version 2 not compressed");
+            int z80addr = 32 + additionHeaderBlockLength;
+            for (int i= 16384; i < data.length + 16384; i++)
+            {
+                memory[i] = fileBytes[z80addr++];
+            }
+        }
+        else
+        {
+            NSLog(@"Version 2 compressed");
+            int filePtr = 32 + additionHeaderBlockLength;
+            int memoryPtr = 16384;
+            NSUInteger unpackedLength = 48 * 1024;
+            
+            while (memoryPtr < unpackedLength)
+            {
+                unsigned char byte1 = fileBytes[filePtr];
+                unsigned char byte2 = fileBytes[filePtr + 1];
+                
+                if ((unpackedLength + 16384) - memoryPtr >= 2 &&
+                    byte1 == 0xed &&
+                    byte2 == 0xed)
+                {
+                    unsigned char count = fileBytes[filePtr + 2];
+                    unsigned char value = fileBytes[filePtr + 3];
+                    for (int i = 0; i < count; i++)
+                    {
+                        memory[memoryPtr++] = value;
+                    }
+                    filePtr += 4;
+                }
+                else
+                {
+                    memory[memoryPtr++] = fileBytes[filePtr++];
+                }
+            }
+        }
+        
+    }
+    
+    [self resetSound];
+    [self resetKeyboardMap];
+    [self resetFrame];
+
+}
+
 #pragma mark - View Event Protocol Methods
 
 - (void)keyDown:(NSEvent *)theEvent
 {
     if (!theEvent.isARepeat && !(theEvent.modifierFlags & NSCommandKeyMask))
     {
-        switch (theEvent.keyCode)
-        {
-            case 51: // Backspace
-                keyboardMap[0] &= ~0x01; // Shift
-                keyboardMap[4] &= ~0x01; // 0
-                break;
-                
-            case 126: // Arrow up
-                keyboardMap[0] &= ~0x01; // Shift
-                keyboardMap[4] &= ~0x08; // 7
-                break;
-                
-            case 125: // Arrow down
-                keyboardMap[0] &= ~0x01; // Shift
-                keyboardMap[4] &= ~0x10; // 6
-                break;
-                
-            case 123: // Arrow left
-                keyboardMap[0] &= ~0x01; // Shift
-                keyboardMap[3] &= ~0x10; // 5
-                break;
-                
-            case 124: // Arrow right
-                keyboardMap[0] &= ~0x01; // Shift
-                keyboardMap[4] &= ~0x04; // 8
-                break;
-                
-            default:
-                for (NSUInteger i = 0; i < sizeof(keyboardLookup) / sizeof(keyboardLookup[0]); i++)
-                {
-                    if (keyboardLookup[i].keyCode == theEvent.keyCode)
+        // Because keyboard updates are called on the main thread, changes to the keyboard map
+        // must be done on the emulation queue to prevent a race condition
+        dispatch_sync(self.emulationQueue, ^{
+            switch (theEvent.keyCode)
+            {
+                case 51: // Backspace
+                    keyboardMap[0] &= ~0x01; // Shift
+                    keyboardMap[4] &= ~0x01; // 0
+                    break;
+                    
+                case 126: // Arrow up
+                    keyboardMap[0] &= ~0x01; // Shift
+                    keyboardMap[4] &= ~0x08; // 7
+                    break;
+                    
+                case 125: // Arrow down
+                    keyboardMap[0] &= ~0x01; // Shift
+                    keyboardMap[4] &= ~0x10; // 6
+                    break;
+                    
+                case 123: // Arrow left
+                    keyboardMap[0] &= ~0x01; // Shift
+                    keyboardMap[3] &= ~0x10; // 5
+                    break;
+                    
+                case 124: // Arrow right
+                    keyboardMap[0] &= ~0x01; // Shift
+                    keyboardMap[4] &= ~0x04; // 8
+                    break;
+                    
+                default:
+                    for (NSUInteger i = 0; i < sizeof(keyboardLookup) / sizeof(keyboardLookup[0]); i++)
                     {
-                        dispatch_sync(self.emulationQueue, ^{
+                        if (keyboardLookup[i].keyCode == theEvent.keyCode)
+                        {
                             keyboardMap[keyboardLookup[i].mapEntry] &= ~(1 << keyboardLookup[i].mapBit);
-                        });
-                        break;
+                            break;
+                        }
                     }
-                }
-                break;
-        }
+                    break;
+            }
+        });
     }
 }
 
@@ -929,46 +1100,48 @@ static unsigned char floatingBus()
 {
     if (!theEvent.isARepeat && !(theEvent.modifierFlags & NSCommandKeyMask))
     {
-        switch (theEvent.keyCode)
-        {
-            case 51: // Backspace
-                keyboardMap[0] |= 0x01; // Shift
-                keyboardMap[4] |= 0x01; // 0
-                break;
-                
-            case 126: // Arrow up
-                keyboardMap[0] |= 0x01; // Shift
-                keyboardMap[4] |= 0x08; // 7
-                break;
-                
-            case 125: // Arrow down
-                keyboardMap[0] |= 0x01; // Shift
-                keyboardMap[4] |= 0x10; // 6
-                break;
-                
-            case 123: // Arrow left
-                keyboardMap[0] |= 0x01; // Shift
-                keyboardMap[3] |= 0x10; // 5
-                break;
-                
-            case 124: // Arrow right
-                keyboardMap[0] |= 0x01; // Shift
-                keyboardMap[4] |= 0x04; // 8
-                break;
-                
-            default:
-                for (NSUInteger i = 0; i < sizeof(keyboardLookup) / sizeof(keyboardLookup[0]); i++)
-                {
-                    if (keyboardLookup[i].keyCode == theEvent.keyCode)
+        // Because keyboard updates are called on the main thread, changes to the keyboard map
+        // must be done on the emulation queue to prevent a race condition
+        dispatch_sync(self.emulationQueue, ^{
+            switch (theEvent.keyCode)
+            {
+                case 51: // Backspace
+                    keyboardMap[0] |= 0x01; // Shift
+                    keyboardMap[4] |= 0x01; // 0
+                    break;
+                    
+                case 126: // Arrow up
+                    keyboardMap[0] |= 0x01; // Shift
+                    keyboardMap[4] |= 0x08; // 7
+                    break;
+                    
+                case 125: // Arrow down
+                    keyboardMap[0] |= 0x01; // Shift
+                    keyboardMap[4] |= 0x10; // 6
+                    break;
+                    
+                case 123: // Arrow left
+                    keyboardMap[0] |= 0x01; // Shift
+                    keyboardMap[3] |= 0x10; // 5
+                    break;
+                    
+                case 124: // Arrow right
+                    keyboardMap[0] |= 0x01; // Shift
+                    keyboardMap[4] |= 0x04; // 8
+                    break;
+                    
+                default:
+                    for (NSUInteger i = 0; i < sizeof(keyboardLookup) / sizeof(keyboardLookup[0]); i++)
                     {
-                        dispatch_sync(self.emulationQueue, ^{
-                            keyboardMap[keyboardLookup[i].mapEntry] |= (1 << keyboardLookup[i].mapBit);
-                        });
-                        break;
+                        if (keyboardLookup[i].keyCode == theEvent.keyCode)
+                        {
+                                keyboardMap[keyboardLookup[i].mapEntry] |= (1 << keyboardLookup[i].mapBit);
+                            break;
+                        }
                     }
-                }
-                break;
-        }
+                    break;
+            }
+        });
     }
 }
 
@@ -976,6 +1149,8 @@ static unsigned char floatingBus()
 {
     if (!(theEvent.modifierFlags & NSCommandKeyMask))
     {
+        // Because keyboard updates are called on the main thread, changes to the keyboard map
+        // must be done on the emulation queue to prevent a race condition
         dispatch_sync(self.emulationQueue, ^{
             switch (theEvent.keyCode)
             {

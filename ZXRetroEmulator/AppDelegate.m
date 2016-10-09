@@ -106,6 +106,7 @@
 
 - (IBAction)machineReset:(id)sender
 {
+    // Ensure that the reset request to the machine is done on the emulation queue
     dispatch_sync(self.machine.emulationQueue, ^{
         [self.machine reset];
     });
@@ -116,7 +117,7 @@
     NSOpenPanel *openPanel = [NSOpenPanel new];
     openPanel.canChooseDirectories = NO;
     openPanel.allowsMultipleSelection = NO;
-    openPanel.allowedFileTypes = @[@"sna"];
+    openPanel.allowedFileTypes = @[@"sna", @"z80"];
     
     dispatch_async(dispatch_get_main_queue(), ^{
         [openPanel beginSheetModalForWindow:self.window completionHandler:^(NSInteger result) {
