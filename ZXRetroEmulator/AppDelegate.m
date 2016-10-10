@@ -146,12 +146,12 @@
 {
     if (self.borderVisible)
     {
-        [self.emulationViewController hideBorder];
+        [self.emulationViewController hideBorderWithAnimation:YES];
         self.borderVisible = NO;
     }
     else
     {
-        [self.emulationViewController showBorder];
+        [self.emulationViewController showBorderWithAnimation:YES];
         self.borderVisible = YES;
     }
 }

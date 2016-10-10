@@ -14,7 +14,7 @@
 
 #pragma mark - Methods
 
-- (void)hideBorder;
-- (void)showBorder;
+- (void)hideBorderWithAnimation:(BOOL)withAnimation;
+- (void)showBorderWithAnimation:(BOOL)withAnimation;
 
 @end
