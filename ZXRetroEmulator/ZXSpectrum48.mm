@@ -146,6 +146,7 @@ typedef enum : NSUInteger {
     None,
     Reset,
     Snapshot,
+    Z80Snapshot
 } EventType;
 
 EventType event;
@@ -352,7 +353,12 @@ static unsigned char keyboardMap[8];
                 
             case Snapshot:
                 [self reset];
-//                [self loadSnapshot];
+                [self loadSnapshot];
+                event = None;
+                break;
+                
+            case Z80Snapshot:
+                [self reset];
                 [self loadZ80Snapshot];
                 event = None;
                 break;
@@ -819,8 +825,20 @@ static unsigned char floatingBus()
 {
     // This will be called from the main thread so it needs to by sync'd with the emulation queue
     dispatch_sync(self.emulationQueue, ^{
+        
         self.snapshotPath = path;
-        event = Snapshot;        
+        NSString *extension = [path pathExtension];
+        
+        if ([extension isEqualToString:@"sna"])
+        {
+            event = Snapshot;
+        }
+
+        if ([extension isEqualToString:@"z80"])
+        {
+            event = Z80Snapshot;
+        }
+
     });
 }
 
@@ -928,121 +946,92 @@ static unsigned char floatingBus()
     NSLog(@"IFF1: %i IM Mode: %i", (unsigned char)fileBytes[27] & 1, (unsigned char)fileBytes[29] & 3);
     
     // Deal with the extra data available in version 2 & 3 formats
-    int16_t additionHeaderBlockLength = 0;
-    if (!version1)
-    {
-        additionHeaderBlockLength = ((unsigned short *)&fileBytes[30])[0];
-    }
-    
     if (version1)
     {
-        if (!compressed)
-        {
-            NSLog(@"Version 1 not compressed");
-            int z80addr = 30;
-            for (int i= 16384; i < data.length + 16384; i++)
-            {
-                memory[i] = fileBytes[z80addr++];
-            }
-        }
-        else
-        {
-            NSLog(@"Version 1 compressed");
-            int filePtr = 30;
-            int memoryPtr = 16384;
-            NSUInteger unpackedLength = 48 * 1024;
-            
-            while (memoryPtr < unpackedLength + 16384)
-            {
-                unsigned char byte1 = fileBytes[filePtr];
-                unsigned char byte2 = fileBytes[filePtr + 1];
-                
-                if ((unpackedLength + 16384) - memoryPtr >= 2 &&
-                    byte1 == 0xed &&
-                    byte2 == 0xed)
-                {
-                    unsigned char count = fileBytes[filePtr + 2];
-                    unsigned char value = fileBytes[filePtr + 3];
-                    for (int i = 0; i < count; i++)
-                    {
-                        memory[memoryPtr++] = value;
-                    }
-                    filePtr += 4;
-                }
-                else
-                {
-                    memory[memoryPtr++] = fileBytes[filePtr++];
-                }
-            }
-        }
+        NSLog(@"Version 1");
+        [self extractMemoryBlock:fileBytes memAddr:16384 fileOffset:30 compressed:compressed unpackedLength:49152];
     }
     else
     {
+        NSLog(@"Version 2");
+       
+        int16_t additionHeaderBlockLength = 0;
+        additionHeaderBlockLength = ((unsigned short *)&fileBytes[30])[0];
         int offset = 32 + additionHeaderBlockLength;
         
         while (offset < data.length)
         {
             int compressedLength = ((unsigned short *)&fileBytes[offset])[0];
             BOOL isCompressed = YES;
-            if (compressedLength == 0xffff)
+            if (compressedLength == 65535)
             {
-                compressedLength = 0x4000;
+                compressedLength = 16384;
                 isCompressed = NO;
             }
             
-            int pageId = fileBytes[offset+2];
-            
-            
-        }
-        
-        
-        
-        if (!compressed)
-        {
-            NSLog(@"Version 2 not compressed");
-            int z80addr = 32 + additionHeaderBlockLength;
-            for (int i= 16384; i < data.length + 16384; i++)
-            {
-                memory[i] = fileBytes[z80addr++];
+            int pageId = fileBytes[offset + 2];
+         
+            switch (pageId) {
+                case 4:
+                    [self extractMemoryBlock:fileBytes memAddr:32768 fileOffset:offset + 3 compressed:isCompressed unpackedLength:16384];
+                    break;
+                case 5:
+                    [self extractMemoryBlock:fileBytes memAddr:49152 fileOffset:offset + 3 compressed:isCompressed unpackedLength:16384];
+                    break;
+                case 8:
+                    [self extractMemoryBlock:fileBytes memAddr:16384 fileOffset:offset + 3 compressed:isCompressed unpackedLength:16384];
+                    break;
+                default:
+                    break;
             }
-        }
-        else
-        {
-            NSLog(@"Version 2 compressed");
-            int filePtr = 32 + additionHeaderBlockLength;
-            int memoryPtr = 16384;
-            NSUInteger unpackedLength = 48 * 1024;
             
-            while (memoryPtr < unpackedLength)
-            {
-                unsigned char byte1 = fileBytes[filePtr];
-                unsigned char byte2 = fileBytes[filePtr + 1];
-                
-                if ((unpackedLength + 16384) - memoryPtr >= 2 &&
-                    byte1 == 0xed &&
-                    byte2 == 0xed)
-                {
-                    unsigned char count = fileBytes[filePtr + 2];
-                    unsigned char value = fileBytes[filePtr + 3];
-                    for (int i = 0; i < count; i++)
-                    {
-                        memory[memoryPtr++] = value;
-                    }
-                    filePtr += 4;
-                }
-                else
-                {
-                    memory[memoryPtr++] = fileBytes[filePtr++];
-                }
-            }
+            offset += compressedLength + 3;
         }
-        
     }
     
     [self resetSound];
     [self resetKeyboardMap];
     [self resetFrame];
 
+}
+
+- (void)extractMemoryBlock:(const char*)fileBytes memAddr:(int)memAddr fileOffset:(int)fileOffset compressed:(BOOL)isCompressed unpackedLength:(int)unpackedLength
+{
+    int filePtr = fileOffset;
+    int memoryPtr = memAddr;
+    
+    if (!isCompressed)
+    {
+        while (memoryPtr < unpackedLength + memAddr)
+        {
+            memory[memoryPtr++] = fileBytes[filePtr++];
+        }
+    }
+    else
+    {
+        while (memoryPtr < unpackedLength + memAddr)
+        {
+            unsigned char byte1 = fileBytes[filePtr];
+            unsigned char byte2 = fileBytes[filePtr + 1];
+            
+            if ((unpackedLength + memAddr) - memoryPtr >= 2 &&
+                byte1 == 0xed &&
+                byte2 == 0xed)
+            {
+                unsigned char count = fileBytes[filePtr + 2];
+                unsigned char value = fileBytes[filePtr + 3];
+                for (int i = 0; i < count; i++)
+                {
+                    memory[memoryPtr++] = value;
+                }
+                filePtr += 4;
+            }
+            else
+            {
+                memory[memoryPtr++] = fileBytes[filePtr++];
+            }
+        }
+    }
 }
 
 #pragma mark - View Event Protocol Methods

@@ -95,7 +95,7 @@
 			isa = PBXGroup;
 			children = (
 				EDE6EA401DA119DF00F4AD64 /* Entitlements */,
-				ED36500E1D7AFA6D00A6383B /* ZXRetroEmulator */,
+				ED36500E1D7AFA6D00A6383B /* SpectREM */,
 				ED36500D1D7AFA6D00A6383B /* Products */,
 				EDE6EA411DA119FD00F4AD64 /* Frameworks */,
 			);
@@ -109,7 +109,7 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		ED36500E1D7AFA6D00A6383B /* ZXRetroEmulator */ = {
+		ED36500E1D7AFA6D00A6383B /* SpectREM */ = {
 			isa = PBXGroup;
 			children = (
 				ED36504A1D7B21B100A6383B /* EmuApplication */,
@@ -123,6 +123,7 @@
 				ED3650221D7AFA9400A6383B /* Assets */,
 				ED3650121D7AFA6D00A6383B /* Supporting Files */,
 			);
+			name = SpectREM;
 			path = ZXRetroEmulator;
 			sourceTree = "<group>";
 		};
